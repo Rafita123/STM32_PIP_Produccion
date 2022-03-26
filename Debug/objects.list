@@ -1,5 +1,6 @@
 "./Core/Src/INA219.o"
 "./Core/Src/Modbus.o"
+"./Core/Src/UARTCallback.o"
 "./Core/Src/freertos.o"
 "./Core/Src/main.o"
 "./Core/Src/stm32f1xx_hal_msp.o"
