@@ -53,6 +53,8 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
+I2C_HandleTypeDef hi2c1;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
@@ -86,32 +88,10 @@ const osThreadAttr_t TaskControl_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime,
 };
-/* Definitions for Speed2 */
-osThreadId_t Speed2Handle;
-const osThreadAttr_t Speed2_attributes = {
-  .name = "Speed2",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityHigh2,
-};
 /* Definitions for Semaforo1 */
 osSemaphoreId_t Semaforo1Handle;
 const osSemaphoreAttr_t Semaforo1_attributes = {
   .name = "Semaforo1"
-};
-/* Definitions for Semaforo2 */
-osSemaphoreId_t Semaforo2Handle;
-const osSemaphoreAttr_t Semaforo2_attributes = {
-  .name = "Semaforo2"
-};
-/* Definitions for Semaforo3 */
-osSemaphoreId_t Semaforo3Handle;
-const osSemaphoreAttr_t Semaforo3_attributes = {
-  .name = "Semaforo3"
-};
-/* Definitions for Semaforo4 */
-osSemaphoreId_t Semaforo4Handle;
-const osSemaphoreAttr_t Semaforo4_attributes = {
-  .name = "Semaforo4"
 };
 /* USER CODE BEGIN PV */
 
@@ -125,11 +105,11 @@ static void MX_GPIO_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART3_UART_Init(void);
+static void MX_I2C1_Init(void);
 void StartSpeed1(void *argument);
 void StartModbus(void *argument);
 void StartCheckVelocidad(void *argument);
 void StartTaskControl(void *argument);
-void StartSpeed2(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -147,54 +127,52 @@ uint32_t cantTicksTmr2 = 20000;
 uint64_t fsTmr2= 50000;
 uint64_t tickFilter = 600; // Parametro delicado, puede hacer cagadas en la medicion de la velocidad, OJO
 
-float velocidad1;
-float velocidad1_prima1;
-float velocidad1_prima2;
-float velocidad2;
-float velocidad2_prima1;
-float velocidad2_prima2;
+float velocidad[4];
+float velocidad_prima1[4];
+float velocidad_prima2[4];
 
-uint32_t ticksPrev1;
-uint32_t ticksNow1;
-uint32_t ticksAux1;
-uint32_t deltaTicks1;
+uint8_t flags_motores[4];
 
-uint32_t ticksPrev2;
-uint32_t ticksNow2;
-uint32_t ticksAux2;
-uint32_t deltaTicks2;
+uint32_t ticksPrev[4];
+uint32_t ticksNow[4];
+uint32_t ticksAux[4];
+uint32_t deltaTicks[4];
 
 uint16_t overflow = 0; // Cantidad de desbordes del timer
 
 
 void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
 	if (GPIO_Pin == D01_Encoder_Pin){
-		ticksAux1 = ticksPrev1;
-		ticksPrev1 = ticksNow1;
-		ticksNow1 = __HAL_TIM_GetCounter(&htim2);
+		ticksAux[0] = ticksPrev[0];
+		ticksPrev[0] = ticksNow[0];
+		ticksNow[0] = __HAL_TIM_GetCounter(&htim2);
 		osSemaphoreRelease(Semaforo1Handle);
+		flags_motores[0]=1;
 	}
 
 	if (GPIO_Pin == D02_Encoder_Pin){
-		ticksAux2 = ticksPrev2;
-		ticksPrev2 = ticksNow2;
-		ticksNow2 = __HAL_TIM_GetCounter(&htim2);
-		osSemaphoreRelease(Semaforo2Handle);
+		ticksAux[1] = ticksPrev[1];
+		ticksPrev[1] = ticksNow[1];
+		ticksNow[1] = __HAL_TIM_GetCounter(&htim2);
+		osSemaphoreRelease(Semaforo1Handle);
+		flags_motores[1]=1;
 	}
 
-//	if (GPIO_Pin == D03_Encoder_Pin){
-//		ticksAux[1] = ticksPrev[1];
-//		ticksPrev[1] = ticksNow[1];
-//		ticksNow[1] = __HAL_TIM_GetCounter(&htim2);
-//		osSemaphoreRelease(Semaforo3Handle);
-//	}
-//
-//	if (GPIO_Pin == D04_Encoder_Pin){
-//		ticksAux[1] = ticksPrev[1];
-//		ticksPrev[1] = ticksNow[1];
-//		ticksNow[1] = __HAL_TIM_GetCounter(&htim2);
-//		osSemaphoreRelease(Semaforo4Handle);
-//	}
+	if (GPIO_Pin == D03_Encoder_Pin){
+		ticksAux[2] = ticksPrev[2];
+		ticksPrev[2] = ticksNow[2];
+		ticksNow[2] = __HAL_TIM_GetCounter(&htim2);
+		osSemaphoreRelease(Semaforo1Handle);
+		flags_motores[2]=1;
+	}
+
+	if (GPIO_Pin == D04_Encoder_Pin){
+		ticksAux[3] = ticksPrev[3];
+		ticksPrev[3] = ticksNow[3];
+		ticksNow[3] = __HAL_TIM_GetCounter(&htim2);
+		osSemaphoreRelease(Semaforo1Handle);
+		flags_motores[3]=1;
+	}
 
 
 }
@@ -231,6 +209,7 @@ int main(void)
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_USART3_UART_Init();
+  MX_I2C1_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
 	Linealizacion_initialize();
@@ -275,15 +254,6 @@ int main(void)
   /* creation of Semaforo1 */
   Semaforo1Handle = osSemaphoreNew(1, 1, &Semaforo1_attributes);
 
-  /* creation of Semaforo2 */
-  Semaforo2Handle = osSemaphoreNew(1, 1, &Semaforo2_attributes);
-
-  /* creation of Semaforo3 */
-  Semaforo3Handle = osSemaphoreNew(1, 1, &Semaforo3_attributes);
-
-  /* creation of Semaforo4 */
-  Semaforo4Handle = osSemaphoreNew(1, 1, &Semaforo4_attributes);
-
   /* USER CODE BEGIN RTOS_SEMAPHORES */
 	/* add semaphores, ... */
   /* USER CODE END RTOS_SEMAPHORES */
@@ -308,9 +278,6 @@ int main(void)
 
   /* creation of TaskControl */
   TaskControlHandle = osThreadNew(StartTaskControl, NULL, &TaskControl_attributes);
-
-  /* creation of Speed2 */
-  Speed2Handle = osThreadNew(StartSpeed2, NULL, &Speed2_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -373,6 +340,40 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+}
+
+/**
+  * @brief I2C1 Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_I2C1_Init(void)
+{
+
+  /* USER CODE BEGIN I2C1_Init 0 */
+
+  /* USER CODE END I2C1_Init 0 */
+
+  /* USER CODE BEGIN I2C1_Init 1 */
+
+  /* USER CODE END I2C1_Init 1 */
+  hi2c1.Instance = I2C1;
+  hi2c1.Init.ClockSpeed = 100000;
+  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
+  hi2c1.Init.OwnAddress1 = 0;
+  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
+  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
+  hi2c1.Init.OwnAddress2 = 0;
+  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
+  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
+  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN I2C1_Init 2 */
+
+  /* USER CODE END I2C1_Init 2 */
+
 }
 
 /**
@@ -629,20 +630,44 @@ void StartSpeed1(void *argument)
 	float velocidad_prima2_l = 0;
 	float velocidad_prima1_l = 0;
 	float velocidad_l = 0;
+	uint8_t flags_motores_l[4];
+	uint8_t valor = 0;
 	/* Infinite loop */
 	for(;;)
 	{
 		osSemaphoreAcquire(Semaforo1Handle, osWaitForever);
 		taskENTER_CRITICAL();
+		flags_motores_l[0] = flags_motores[0];
+		flags_motores_l[1] = flags_motores[1];
+		flags_motores_l[2] = flags_motores[2];
+		flags_motores_l[3] = flags_motores[3];
+		taskEXIT_CRITICAL();
 
-		ticksPrev_l = ticksPrev1;
-		ticksNow_l = ticksNow1;
-		ticksAux_l = ticksAux1;
+		if (flags_motores_l[0] == 1)
+		{
+			valor = 0;
+		}
+		if (flags_motores_l[1] == 1)
+		{
+			valor = 1;
+		}
+		if (flags_motores_l[2] == 1)
+		{
+			valor = 2;
+		}
+		if (flags_motores_l[3] == 1)
+		{
+			valor = 3;
+		}
+
+		taskENTER_CRITICAL();
+		ticksPrev_l = ticksPrev[valor];
+		ticksNow_l = ticksNow[valor];
+		ticksAux_l = ticksAux[valor];
 		overflow_l = overflow;
-		velocidad_l = velocidad1;
-		velocidad_prima1_l = velocidad1_prima1;
-		velocidad_prima2_l = velocidad1_prima2;
-
+		velocidad_l = velocidad[valor];
+		velocidad_prima1_l = velocidad_prima1[valor];
+		velocidad_prima2_l = velocidad_prima2[valor];
 		taskEXIT_CRITICAL();
 
 		//		HAL_NVIC_EnableIRQ(EXTI1_IRQn);
@@ -657,16 +682,16 @@ void StartSpeed1(void *argument)
 				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
 
 				taskENTER_CRITICAL();
-				deltaTicks1 = deltaTicks_l;
-				velocidad1 = velocidad_l;
-				velocidad1_prima1= velocidad_prima1_l;
-				velocidad1_prima2 = velocidad_prima2_l;
+				deltaTicks[valor] = deltaTicks_l;
+				velocidad[valor] = velocidad_l;
+				velocidad_prima1[valor]= velocidad_prima1_l;
+				velocidad_prima2[valor] = velocidad_prima2_l;
 				taskEXIT_CRITICAL();
 			}
 			else{
 				taskENTER_CRITICAL();
-				ticksNow1 = ticksPrev_l;
-				ticksPrev1 = ticksAux_l;
+				ticksNow[valor] = ticksPrev_l;
+				ticksPrev[valor] = ticksAux_l;
 				taskEXIT_CRITICAL();
 			}
 		} else{
@@ -680,19 +705,22 @@ void StartSpeed1(void *argument)
 
 				taskENTER_CRITICAL();
 				overflow = 0;
-				deltaTicks1 = deltaTicks_l;
-				velocidad1 = velocidad_l;
-				velocidad1_prima1 = velocidad_prima1_l;
-				velocidad1_prima2 = velocidad_prima2_l;
+				deltaTicks[valor] = deltaTicks_l;
+				velocidad[valor] = velocidad_l;
+				velocidad_prima1[valor] = velocidad_prima1_l;
+				velocidad_prima2[valor] = velocidad_prima2_l;
 				taskEXIT_CRITICAL();
 			}
 			else{
 				taskENTER_CRITICAL();
-				ticksNow1 = ticksPrev_l;
-				ticksPrev1 = ticksAux_l;
+				ticksNow[valor] = ticksPrev_l;
+				ticksPrev[valor] = ticksAux_l;
 				taskEXIT_CRITICAL();
 			}
 		}
+		taskENTER_CRITICAL();
+		flags_motores[valor] = 0;
+		taskEXIT_CRITICAL();
 		osDelay(1);
 	}
   /* USER CODE END 5 */
@@ -713,23 +741,23 @@ void StartModbus(void *argument)
 	//	uint16_t delta3[2];
 	//	uint16_t delta4[2];
 
-	float velocidad1_prima1_l;
-	float velocidad2_prima1_l;
+	float velocidad1;
+	float velocidad2;
 	uint16_t ModbusDATA_l[24] = {'\0'};
 	/* Infinite loop */
 	for(;;)
 	{
 		taskENTER_CRITICAL();
-		velocidad1_prima1_l = velocidad1_prima1;
-		velocidad2_prima1_l = velocidad2_prima1;
+		velocidad1 = velocidad_prima1[0];
+		velocidad2 = velocidad_prima1[1];
 		taskEXIT_CRITICAL();
 
 
-		memcpy(delta1, &velocidad1_prima1_l, sizeof(velocidad1_prima1_l));
+		memcpy(delta1, &velocidad1, sizeof(velocidad1));
 		ModbusDATA_l[2]=delta1[0];
 		ModbusDATA_l[3]=delta1[1];
 
-		memcpy(delta2, &velocidad2_prima1_l, sizeof(velocidad2_prima1_l));
+		memcpy(delta2, &velocidad2, sizeof(velocidad2));
 		ModbusDATA_l[8]=delta2[0];
 		ModbusDATA_l[9]=delta2[1];
 
@@ -778,20 +806,20 @@ void StartCheckVelocidad(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
-//		taskENTER_CRITICAL();
-//		overflow_l = overflow;
-//		taskEXIT_CRITICAL();
-//
-//		if(overflow_l >= 3){
-//			overflow_l = 0;
-//			taskENTER_CRITICAL();
-//			overflow = 0;
-//			velocidad_prima2[1] = 0;
-//			velocidad_prima1[1] = 0;
-//			velocidad[1] = 0;
-//			taskEXIT_CRITICAL();
+		//		taskENTER_CRITICAL();
+		//		overflow_l = overflow;
+		//		taskEXIT_CRITICAL();
+		//
+		//		if(overflow_l >= 3){
+		//			overflow_l = 0;
+		//			taskENTER_CRITICAL();
+		//			overflow = 0;
+		//			velocidad_prima2[1] = 0;
+		//			velocidad_prima1[1] = 0;
+		//			velocidad[1] = 0;
+		//			taskEXIT_CRITICAL();
 
-//		}
+		//		}
 		osDelay(5);
 	}
   /* USER CODE END StartCheckVelocidad */
@@ -815,30 +843,30 @@ void StartTaskControl(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
-//		taskENTER_CRITICAL();
-//		velocidad_l[0] = velocidad[0];
-//		Setpoint[0] = ModbusDATA[0]/1000.0;
-//		velocidad_l[1] = velocidad[1];
-//		Setpoint[1] = ModbusDATA[6]/1000.0;
+		//		taskENTER_CRITICAL();
+		//		velocidad_l[0] = velocidad[0];
+		//		Setpoint[0] = ModbusDATA[0]/1000.0;
+		//		velocidad_l[1] = velocidad[1];
+		//		Setpoint[1] = ModbusDATA[6]/1000.0;
 
-//		taskEXIT_CRITICAL();
-//
-//		rtEntrada_Control = Setpoint[1] - velocidad_l[1]; //Error para PID
-//		control_step(); //Ejecutamos control
-//
-//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
-//		Linealizacion_step();	//Ejecutamos planta linealizadora
-//
-//		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion;	//Salida linealizada asignada a CCR
-//
-//
-//		rtEntrada_Control = Setpoint[0] - velocidad_l[0]; //Error para PID
-//		control_step(); //Ejecutamos control
-//
-//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
-//		Linealizacion_step();	//Ejecutamos planta linealizadora
-//
-//		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion;
+		//		taskEXIT_CRITICAL();
+		//
+		//		rtEntrada_Control = Setpoint[1] - velocidad_l[1]; //Error para PID
+		//		control_step(); //Ejecutamos control
+		//
+		//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
+		//		Linealizacion_step();	//Ejecutamos planta linealizadora
+		//
+		//		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion;	//Salida linealizada asignada a CCR
+		//
+		//
+		//		rtEntrada_Control = Setpoint[0] - velocidad_l[0]; //Error para PID
+		//		control_step(); //Ejecutamos control
+		//
+		//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
+		//		Linealizacion_step();	//Ejecutamos planta linealizadora
+		//
+		//		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion;
 		htim1.Instance->CCR2 =ModbusDATA[6];
 		htim1.Instance->CCR1 =ModbusDATA[0];
 
@@ -872,97 +900,6 @@ void StartTaskControl(void *argument)
 	}
 
   /* USER CODE END StartTaskControl */
-}
-
-/* USER CODE BEGIN Header_StartSpeed2 */
-/**
- * @brief Function implementing the Speed2 thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_StartSpeed2 */
-void StartSpeed2(void *argument)
-{
-  /* USER CODE BEGIN StartSpeed2 */
-	uint32_t ticksPrev_l = 0;
-	uint32_t ticksNow_l = 0;
-	uint32_t ticksAux_l = 0;
-	uint32_t deltaTicks_l = 0;
-	uint16_t overflow_l =0;
-	float velocidad_prima2_l = 0;
-	float velocidad_prima1_l = 0;
-	float velocidad_l = 0;
-	/* Infinite loop */
-	for(;;)
-	{
-
-		/* Infinite loop */
-		osSemaphoreAcquire(Semaforo2Handle, osWaitForever);
-		HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin);
-		taskENTER_CRITICAL();
-
-		ticksPrev_l = ticksPrev2;
-		ticksNow_l = ticksNow2;
-		ticksAux_l = ticksAux2;
-		overflow_l = overflow;
-		velocidad_l = velocidad2;
-		velocidad_prima1_l = velocidad2_prima1;
-		velocidad_prima2_l = velocidad2_prima2;
-
-		taskEXIT_CRITICAL();
-
-		//		HAL_NVIC_EnableIRQ(EXTI1_IRQn);
-
-		if (overflow_l == 0){
-			// Todo cool, calculo normal
-			deltaTicks_l = ticksNow_l - ticksPrev_l;
-			if (deltaTicks_l > tickFilter){
-				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
-				//Filtro IIR
-				velocidad_prima2_l = velocidad_prima1_l;
-				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
-
-				taskENTER_CRITICAL();
-				deltaTicks2 = deltaTicks_l;
-				velocidad2 = velocidad_l;
-				velocidad2_prima1= velocidad_prima1_l;
-				velocidad2_prima2 = velocidad_prima2_l;
-				taskEXIT_CRITICAL();
-			}
-			else{
-				taskENTER_CRITICAL();
-				ticksNow2 = ticksPrev_l;
-				ticksPrev2 = ticksAux_l;
-				taskEXIT_CRITICAL();
-			}
-		} else{
-			// Tuve algun desborde y tengo que tenerlo en cuenta
-			deltaTicks_l = (ticksNow_l + overflow_l * cantTicksTmr2)- ticksPrev_l;/////////////////////////////////////////
-			if (deltaTicks_l > tickFilter){
-				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
-				//Filtro IIR
-				velocidad_prima2_l = velocidad_prima1_l;
-				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
-
-				taskENTER_CRITICAL();
-				overflow = 0;
-				deltaTicks2 = deltaTicks_l;
-				velocidad2 = velocidad_l;
-				velocidad2_prima1 = velocidad_prima1_l;
-				velocidad2_prima2 = velocidad_prima2_l;
-				taskEXIT_CRITICAL();
-			}
-			else{
-				taskENTER_CRITICAL();
-				ticksNow2 = ticksPrev_l;
-				ticksPrev2 = ticksAux_l;
-				taskEXIT_CRITICAL();
-			}
-		}
-		osDelay(1);
-	}
-
-  /* USER CODE END StartSpeed2 */
 }
 
 /**
