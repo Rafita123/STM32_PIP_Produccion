@@ -5,7 +5,6 @@
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
-../Core/Src/INA219.c \
 ../Core/Src/Modbus.c \
 ../Core/Src/UARTCallback.c \
 ../Core/Src/freertos.c \
@@ -18,7 +17,6 @@ C_SRCS += \
 ../Core/Src/system_stm32f1xx.c 
 
 OBJS += \
-./Core/Src/INA219.o \
 ./Core/Src/Modbus.o \
 ./Core/Src/UARTCallback.o \
 ./Core/Src/freertos.o \
@@ -31,7 +29,6 @@ OBJS += \
 ./Core/Src/system_stm32f1xx.o 
 
 C_DEPS += \
-./Core/Src/INA219.d \
 ./Core/Src/Modbus.d \
 ./Core/Src/UARTCallback.d \
 ./Core/Src/freertos.d \
@@ -51,7 +48,7 @@ Core/Src/%.o: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/INA219.d ./Core/Src/INA219.o ./Core/Src/Modbus.d ./Core/Src/Modbus.o ./Core/Src/UARTCallback.d ./Core/Src/UARTCallback.o ./Core/Src/freertos.d ./Core/Src/freertos.o ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/stm32f1xx_hal_msp.d ./Core/Src/stm32f1xx_hal_msp.o ./Core/Src/stm32f1xx_hal_timebase_tim.d ./Core/Src/stm32f1xx_hal_timebase_tim.o ./Core/Src/stm32f1xx_it.d ./Core/Src/stm32f1xx_it.o ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/system_stm32f1xx.d ./Core/Src/system_stm32f1xx.o
+	-$(RM) ./Core/Src/Modbus.d ./Core/Src/Modbus.o ./Core/Src/UARTCallback.d ./Core/Src/UARTCallback.o ./Core/Src/freertos.d ./Core/Src/freertos.o ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/stm32f1xx_hal_msp.d ./Core/Src/stm32f1xx_hal_msp.o ./Core/Src/stm32f1xx_hal_timebase_tim.d ./Core/Src/stm32f1xx_hal_timebase_tim.o ./Core/Src/stm32f1xx_it.d ./Core/Src/stm32f1xx_it.o ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/system_stm32f1xx.d ./Core/Src/system_stm32f1xx.o
 
 .PHONY: clean-Core-2f-Src
 

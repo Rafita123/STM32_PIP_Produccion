@@ -53,17 +53,15 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef hi2c1;
-
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
 UART_HandleTypeDef huart3;
 
-/* Definitions for Speed */
-osThreadId_t SpeedHandle;
-const osThreadAttr_t Speed_attributes = {
-  .name = "Speed",
+/* Definitions for Speed1 */
+osThreadId_t Speed1Handle;
+const osThreadAttr_t Speed1_attributes = {
+  .name = "Speed1",
   .stack_size = 256 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
@@ -71,27 +69,49 @@ const osThreadAttr_t Speed_attributes = {
 osThreadId_t ModbusHandle;
 const osThreadAttr_t Modbus_attributes = {
   .name = "Modbus",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for CheckVelocidad */
 osThreadId_t CheckVelocidadHandle;
 const osThreadAttr_t CheckVelocidad_attributes = {
   .name = "CheckVelocidad",
-  .stack_size = 256 * 4,
-  .priority = (osPriority_t) osPriorityAboveNormal,
+  .stack_size = 128 * 4,
+  .priority = (osPriority_t) osPriorityAboveNormal1,
 };
 /* Definitions for TaskControl */
 osThreadId_t TaskControlHandle;
 const osThreadAttr_t TaskControl_attributes = {
   .name = "TaskControl",
-  .stack_size = 256 * 4,
+  .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime,
 };
-/* Definitions for SpeedSemaphore */
-osSemaphoreId_t SpeedSemaphoreHandle;
-const osSemaphoreAttr_t SpeedSemaphore_attributes = {
-  .name = "SpeedSemaphore"
+/* Definitions for Speed2 */
+osThreadId_t Speed2Handle;
+const osThreadAttr_t Speed2_attributes = {
+  .name = "Speed2",
+  .stack_size = 256 * 4,
+  .priority = (osPriority_t) osPriorityHigh2,
+};
+/* Definitions for Semaforo1 */
+osSemaphoreId_t Semaforo1Handle;
+const osSemaphoreAttr_t Semaforo1_attributes = {
+  .name = "Semaforo1"
+};
+/* Definitions for Semaforo2 */
+osSemaphoreId_t Semaforo2Handle;
+const osSemaphoreAttr_t Semaforo2_attributes = {
+  .name = "Semaforo2"
+};
+/* Definitions for Semaforo3 */
+osSemaphoreId_t Semaforo3Handle;
+const osSemaphoreAttr_t Semaforo3_attributes = {
+  .name = "Semaforo3"
+};
+/* Definitions for Semaforo4 */
+osSemaphoreId_t Semaforo4Handle;
+const osSemaphoreAttr_t Semaforo4_attributes = {
+  .name = "Semaforo4"
 };
 /* USER CODE BEGIN PV */
 
@@ -102,14 +122,14 @@ const osSemaphoreAttr_t SpeedSemaphore_attributes = {
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
-static void MX_I2C1_Init(void);
 static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART3_UART_Init(void);
-void StartSpeed(void *argument);
+void StartSpeed1(void *argument);
 void StartModbus(void *argument);
 void StartCheckVelocidad(void *argument);
 void StartTaskControl(void *argument);
+void StartSpeed2(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -120,28 +140,61 @@ void StartTaskControl(void *argument);
 
 //---------------->  Modbus
 modbusHandler_t ModbusH;
-uint16_t ModbusDATA[20]={'\0'}; // Mapa modbus!
+uint16_t ModbusDATA[24]={'\0'}; // Mapa modbus!
 //---------------->
+uint32_t ranuras = 50;
+uint32_t cantTicksTmr2 = 20000;
+uint64_t fsTmr2= 50000;
+uint64_t tickFilter = 600; // Parametro delicado, puede hacer cagadas en la medicion de la velocidad, OJO
 
-float velocidad = 0;
-float velocidad_prima1,velocidad_prima2;
+float velocidad1;
+float velocidad1_prima1;
+float velocidad1_prima2;
+float velocidad2;
+float velocidad2_prima1;
+float velocidad2_prima2;
 
-uint32_t ticksPrev = 0;
-uint32_t ticksNow = 0;
-uint32_t ticksAux = 0;
-uint32_t deltaTicks = 0;
+uint32_t ticksPrev1;
+uint32_t ticksNow1;
+uint32_t ticksAux1;
+uint32_t deltaTicks1;
 
+uint32_t ticksPrev2;
+uint32_t ticksNow2;
+uint32_t ticksAux2;
+uint32_t deltaTicks2;
 
 uint16_t overflow = 0; // Cantidad de desbordes del timer
 
 
 void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
-	if (GPIO_Pin == D02_Encoder_Pin){
-		ticksAux = ticksPrev;
-		ticksPrev = ticksNow;
-		ticksNow = __HAL_TIM_GetCounter(&htim2);
-		osSemaphoreRelease(SpeedSemaphoreHandle);
+	if (GPIO_Pin == D01_Encoder_Pin){
+		ticksAux1 = ticksPrev1;
+		ticksPrev1 = ticksNow1;
+		ticksNow1 = __HAL_TIM_GetCounter(&htim2);
+		osSemaphoreRelease(Semaforo1Handle);
 	}
+
+	if (GPIO_Pin == D02_Encoder_Pin){
+		ticksAux2 = ticksPrev2;
+		ticksPrev2 = ticksNow2;
+		ticksNow2 = __HAL_TIM_GetCounter(&htim2);
+		osSemaphoreRelease(Semaforo2Handle);
+	}
+
+//	if (GPIO_Pin == D03_Encoder_Pin){
+//		ticksAux[1] = ticksPrev[1];
+//		ticksPrev[1] = ticksNow[1];
+//		ticksNow[1] = __HAL_TIM_GetCounter(&htim2);
+//		osSemaphoreRelease(Semaforo3Handle);
+//	}
+//
+//	if (GPIO_Pin == D04_Encoder_Pin){
+//		ticksAux[1] = ticksPrev[1];
+//		ticksPrev[1] = ticksNow[1];
+//		ticksNow[1] = __HAL_TIM_GetCounter(&htim2);
+//		osSemaphoreRelease(Semaforo4Handle);
+//	}
 
 
 }
@@ -175,7 +228,6 @@ int main(void)
 
   /* Initialize all configured peripherals */
   MX_GPIO_Init();
-  MX_I2C1_Init();
   MX_TIM1_Init();
   MX_TIM2_Init();
   MX_USART3_UART_Init();
@@ -204,6 +256,11 @@ int main(void)
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_2);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_3);
 	HAL_TIM_PWM_Start(&htim1, TIM_CHANNEL_4);
+
+	HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(IN2_1_GPIO_Port, IN2_1_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(IN3_1_GPIO_Port, IN3_1_Pin, GPIO_PIN_SET);
+	HAL_GPIO_WritePin(IN4_1_GPIO_Port, IN4_1_Pin, GPIO_PIN_SET);
 	//  	HAL_UART_Transmit(&huart3, (uint8_t*)"V\n", 3*sizeof(char), HAL_MAX_DELAY);
   /* USER CODE END 2 */
 
@@ -215,8 +272,17 @@ int main(void)
   /* USER CODE END RTOS_MUTEX */
 
   /* Create the semaphores(s) */
-  /* creation of SpeedSemaphore */
-  SpeedSemaphoreHandle = osSemaphoreNew(1, 1, &SpeedSemaphore_attributes);
+  /* creation of Semaforo1 */
+  Semaforo1Handle = osSemaphoreNew(1, 1, &Semaforo1_attributes);
+
+  /* creation of Semaforo2 */
+  Semaforo2Handle = osSemaphoreNew(1, 1, &Semaforo2_attributes);
+
+  /* creation of Semaforo3 */
+  Semaforo3Handle = osSemaphoreNew(1, 1, &Semaforo3_attributes);
+
+  /* creation of Semaforo4 */
+  Semaforo4Handle = osSemaphoreNew(1, 1, &Semaforo4_attributes);
 
   /* USER CODE BEGIN RTOS_SEMAPHORES */
 	/* add semaphores, ... */
@@ -231,8 +297,8 @@ int main(void)
   /* USER CODE END RTOS_QUEUES */
 
   /* Create the thread(s) */
-  /* creation of Speed */
-  SpeedHandle = osThreadNew(StartSpeed, NULL, &Speed_attributes);
+  /* creation of Speed1 */
+  Speed1Handle = osThreadNew(StartSpeed1, NULL, &Speed1_attributes);
 
   /* creation of Modbus */
   ModbusHandle = osThreadNew(StartModbus, NULL, &Modbus_attributes);
@@ -242,6 +308,9 @@ int main(void)
 
   /* creation of TaskControl */
   TaskControlHandle = osThreadNew(StartTaskControl, NULL, &TaskControl_attributes);
+
+  /* creation of Speed2 */
+  Speed2Handle = osThreadNew(StartSpeed2, NULL, &Speed2_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -304,40 +373,6 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
-}
-
-/**
-  * @brief I2C1 Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_I2C1_Init(void)
-{
-
-  /* USER CODE BEGIN I2C1_Init 0 */
-
-  /* USER CODE END I2C1_Init 0 */
-
-  /* USER CODE BEGIN I2C1_Init 1 */
-
-  /* USER CODE END I2C1_Init 1 */
-  hi2c1.Instance = I2C1;
-  hi2c1.Init.ClockSpeed = 100000;
-  hi2c1.Init.DutyCycle = I2C_DUTYCYCLE_2;
-  hi2c1.Init.OwnAddress1 = 0;
-  hi2c1.Init.AddressingMode = I2C_ADDRESSINGMODE_7BIT;
-  hi2c1.Init.DualAddressMode = I2C_DUALADDRESS_DISABLE;
-  hi2c1.Init.OwnAddress2 = 0;
-  hi2c1.Init.GeneralCallMode = I2C_GENERALCALL_DISABLE;
-  hi2c1.Init.NoStretchMode = I2C_NOSTRETCH_DISABLE;
-  if (HAL_I2C_Init(&hi2c1) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN I2C1_Init 2 */
-
-  /* USER CODE END I2C1_Init 2 */
-
 }
 
 /**
@@ -537,16 +572,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
   HAL_GPIO_Init(Led_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : D01_Encoder_Pin */
-  GPIO_InitStruct.Pin = D01_Encoder_Pin;
+  /*Configure GPIO pins : D01_Encoder_Pin D02_Encoder_Pin D03_Encoder_Pin D04_Encoder_Pin */
+  GPIO_InitStruct.Pin = D01_Encoder_Pin|D02_Encoder_Pin|D03_Encoder_Pin|D04_Encoder_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
   GPIO_InitStruct.Pull = GPIO_PULLDOWN;
-  HAL_GPIO_Init(D01_Encoder_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : D02_Encoder_Pin D03_Encoder_Pin */
-  GPIO_InitStruct.Pin = D02_Encoder_Pin|D03_Encoder_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : IN2_1_Pin IN2_2_Pin IN1_2_Pin IN1_1_Pin
@@ -581,21 +610,16 @@ static void MX_GPIO_Init(void)
 
 /* USER CODE END 4 */
 
-/* USER CODE BEGIN Header_StartSpeed */
+/* USER CODE BEGIN Header_StartSpeed1 */
 /**
- * @brief  Function implementing the Speed thread.
+ * @brief  Function implementing the Speed1 thread.
  * @param  argument: Not used
  * @retval None
  */
-/* USER CODE END Header_StartSpeed */
-void StartSpeed(void *argument)
+/* USER CODE END Header_StartSpeed1 */
+void StartSpeed1(void *argument)
 {
   /* USER CODE BEGIN 5 */
-
-	uint32_t ranuras = 50;
-	uint32_t cantTicksTmr2 = 20000;
-	uint64_t fsTmr2= 50000;
-	uint64_t tickFilter = 600; // Parametro delicado, puede hacer cagadas en la medicion de la velocidad, OJO
 
 	uint32_t ticksPrev_l = 0;
 	uint32_t ticksNow_l = 0;
@@ -608,16 +632,16 @@ void StartSpeed(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
-		osSemaphoreAcquire(SpeedSemaphoreHandle, osWaitForever);
+		osSemaphoreAcquire(Semaforo1Handle, osWaitForever);
 		taskENTER_CRITICAL();
 
-		ticksPrev_l = ticksPrev;
-		ticksNow_l = ticksNow;
-		ticksAux_l = ticksAux;
+		ticksPrev_l = ticksPrev1;
+		ticksNow_l = ticksNow1;
+		ticksAux_l = ticksAux1;
 		overflow_l = overflow;
-		velocidad_l = velocidad;
-		velocidad_prima1_l = velocidad_prima1;
-		velocidad_prima2_l = velocidad_prima2;
+		velocidad_l = velocidad1;
+		velocidad_prima1_l = velocidad1_prima1;
+		velocidad_prima2_l = velocidad1_prima2;
 
 		taskEXIT_CRITICAL();
 
@@ -633,16 +657,16 @@ void StartSpeed(void *argument)
 				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
 
 				taskENTER_CRITICAL();
-				deltaTicks = deltaTicks_l;
-				velocidad = velocidad_l;
-				velocidad_prima1 = velocidad_prima1_l;
-				velocidad_prima2 = velocidad_prima2_l;
+				deltaTicks1 = deltaTicks_l;
+				velocidad1 = velocidad_l;
+				velocidad1_prima1= velocidad_prima1_l;
+				velocidad1_prima2 = velocidad_prima2_l;
 				taskEXIT_CRITICAL();
 			}
 			else{
 				taskENTER_CRITICAL();
-				ticksNow = ticksPrev_l;
-				ticksPrev = ticksAux_l;
+				ticksNow1 = ticksPrev_l;
+				ticksPrev1 = ticksAux_l;
 				taskEXIT_CRITICAL();
 			}
 		} else{
@@ -656,16 +680,16 @@ void StartSpeed(void *argument)
 
 				taskENTER_CRITICAL();
 				overflow = 0;
-				deltaTicks = deltaTicks_l;
-				velocidad = velocidad_l;
-				velocidad_prima1 = velocidad_prima1_l;
-				velocidad_prima2 = velocidad_prima2_l;
+				deltaTicks1 = deltaTicks_l;
+				velocidad1 = velocidad_l;
+				velocidad1_prima1 = velocidad_prima1_l;
+				velocidad1_prima2 = velocidad_prima2_l;
 				taskEXIT_CRITICAL();
 			}
 			else{
 				taskENTER_CRITICAL();
-				ticksNow = ticksPrev_l;
-				ticksPrev = ticksAux_l;
+				ticksNow1 = ticksPrev_l;
+				ticksPrev1 = ticksAux_l;
 				taskEXIT_CRITICAL();
 			}
 		}
@@ -684,72 +708,56 @@ void StartSpeed(void *argument)
 void StartModbus(void *argument)
 {
   /* USER CODE BEGIN StartModbus */
-	uint16_t delta[2];// para mandar los deltaticks
-	uint16_t delta1[2];
-	uint16_t deltaticks[2];
+	uint16_t delta1[2];// para mandar los deltaticks
 	uint16_t delta2[2];
-	uint16_t delta3[2];
+	//	uint16_t delta3[2];
+	//	uint16_t delta4[2];
 
-
-	float velocidad_l = 0;
-	float velocidad_prima1_l = 0;
-	uint32_t deltaTicks_l = 0;
-
-	uint16_t ModbusDATA_l[32] = {'\0'};
+	float velocidad1_prima1_l;
+	float velocidad2_prima1_l;
+	uint16_t ModbusDATA_l[24] = {'\0'};
 	/* Infinite loop */
 	for(;;)
 	{
-		HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin);
 		taskENTER_CRITICAL();
-		deltaTicks_l = deltaTicks;
-		velocidad_l = velocidad;
-		velocidad_prima1_l = velocidad_prima1;
-		ModbusDATA_l[0] = ModbusDATA[0];
+		velocidad1_prima1_l = velocidad1_prima1;
+		velocidad2_prima1_l = velocidad2_prima1;
 		taskEXIT_CRITICAL();
 
-		HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(IN2_1_GPIO_Port, IN2_1_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(IN3_1_GPIO_Port, IN3_1_Pin, GPIO_PIN_SET);
-		HAL_GPIO_WritePin(IN4_1_GPIO_Port, IN4_1_Pin, GPIO_PIN_SET);
 
+		memcpy(delta1, &velocidad1_prima1_l, sizeof(velocidad1_prima1_l));
+		ModbusDATA_l[2]=delta1[0];
+		ModbusDATA_l[3]=delta1[1];
 
-		memcpy(deltaticks, &deltaTicks_l, sizeof(deltaTicks_l));
-		ModbusDATA_l[1]=deltaticks[0];
-		ModbusDATA_l[2]=deltaticks[1];
-
-		memcpy(delta, &velocidad_l, sizeof(velocidad_l));
-		ModbusDATA_l[3]=delta[0];
-		ModbusDATA_l[4]=delta[1];
-
-		memcpy(delta1, &velocidad_prima1_l, sizeof(velocidad_prima1_l));
-		ModbusDATA_l[5]=delta1[0];
-		ModbusDATA_l[6]=delta1[1];
-
-		memcpy(delta2, &rtSalida_Linealizacion, sizeof(rtSalida_Linealizacion));
-		ModbusDATA_l[7]=delta2[0];
-		ModbusDATA_l[8]=delta2[1];
-
-
-		memcpy(delta3, &rtEntrada_Control, sizeof(rtEntrada_Control));
-		ModbusDATA_l[9]=delta3[0];
-		ModbusDATA_l[10]=delta3[1];
+		memcpy(delta2, &velocidad2_prima1_l, sizeof(velocidad2_prima1_l));
+		ModbusDATA_l[8]=delta2[0];
+		ModbusDATA_l[9]=delta2[1];
 
 
 		taskENTER_CRITICAL();
-		ModbusDATA[0] = ModbusDATA_l[0];
-		ModbusDATA[1] = ModbusDATA_l[1];
+
 		ModbusDATA[2] = ModbusDATA_l[2];
 		ModbusDATA[3] = ModbusDATA_l[3];
 		ModbusDATA[4] = ModbusDATA_l[4];
 		ModbusDATA[5] = ModbusDATA_l[5];
-		ModbusDATA[6] = ModbusDATA_l[6];
-		ModbusDATA[7] = ModbusDATA_l[7];
+
 		ModbusDATA[8] = ModbusDATA_l[8];
 		ModbusDATA[9] = ModbusDATA_l[9];
 		ModbusDATA[10] = ModbusDATA_l[10];
+		ModbusDATA[11] = ModbusDATA_l[11];
+
+		ModbusDATA[14] = ModbusDATA_l[14];
+		ModbusDATA[15] = ModbusDATA_l[15];
+		ModbusDATA[16] = ModbusDATA_l[16];
+		ModbusDATA[17] = ModbusDATA_l[17];
+
+		ModbusDATA[20] = ModbusDATA_l[20];
+		ModbusDATA[21] = ModbusDATA_l[21];
+		ModbusDATA[22] = ModbusDATA_l[22];
+		ModbusDATA[23] = ModbusDATA_l[23];
 		taskEXIT_CRITICAL();
 
-		osDelay(500);
+		osDelay(50);
 	}
   /* USER CODE END StartModbus */
 }
@@ -767,49 +775,23 @@ void StartCheckVelocidad(void *argument)
 
 	uint16_t overflow_l =0;
 
-	///////////////////////////
-
-//	uint16_t rawCurrent = 0;
-//	float current = 0;
-//	while(!INA219_Init(&ina219, &hi2c1, INA219_ADDRESS));
-//	uint16_t delta[2];
-
-	////////////////////////////////////
-
-
-
 	/* Infinite loop */
 	for(;;)
 	{
-		taskENTER_CRITICAL();
-		overflow_l = overflow;
-		taskEXIT_CRITICAL();
-
-		if(overflow_l >= 3){
-			overflow_l = 0;
-			taskENTER_CRITICAL();
-			overflow = 0;
-			velocidad_prima2 = 0;
-			velocidad_prima1 = 0;
-			velocidad = 0;
-			taskEXIT_CRITICAL();
-
-			/////////////////////////////////////////////
-//			rawCurrent = INA219_ReadCurrent_raw(&ina219); // mA?
-//			if(rawCurrent > 32767){
-//				//hago complemento a 2
-//				uint16_t complementCurrent = (0xFFFF - rawCurrent)+1;
-//				current = - complementCurrent / 10.0;
+//		taskENTER_CRITICAL();
+//		overflow_l = overflow;
+//		taskEXIT_CRITICAL();
 //
-//			} else {
-//				current = rawCurrent/10.0; // mA
-//			}
+//		if(overflow_l >= 3){
+//			overflow_l = 0;
+//			taskENTER_CRITICAL();
+//			overflow = 0;
+//			velocidad_prima2[1] = 0;
+//			velocidad_prima1[1] = 0;
+//			velocidad[1] = 0;
+//			taskEXIT_CRITICAL();
 
-//			memcpy(delta, &current, sizeof(current));
-//			ModbusDATA[13]=delta[0];
-//			ModbusDATA[14]=delta[1];
-			//////////////////////////////////////////////
-		}
+//		}
 		osDelay(5);
 	}
   /* USER CODE END StartCheckVelocidad */
@@ -825,34 +807,40 @@ void StartCheckVelocidad(void *argument)
 void StartTaskControl(void *argument)
 {
   /* USER CODE BEGIN StartTaskControl */
-	float velocidad_l=0;
-	float Setpoint = 0;
-	uint16_t delta4[2];
-//	float error=0;
+	float velocidad_l[4]={'\0'};
+	float Setpoint[4] = {'\0'};
+
+	//	float error=0;
 
 	/* Infinite loop */
 	for(;;)
 	{
-		//		HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin);
-		taskENTER_CRITICAL();
-		velocidad_l = velocidad;
-		Setpoint = ModbusDATA[0]/1000.0;
+//		taskENTER_CRITICAL();
+//		velocidad_l[0] = velocidad[0];
+//		Setpoint[0] = ModbusDATA[0]/1000.0;
+//		velocidad_l[1] = velocidad[1];
+//		Setpoint[1] = ModbusDATA[6]/1000.0;
 
-		memcpy(delta4, &Setpoint, sizeof(Setpoint));
-		ModbusDATA[11]=delta4[0];
-		ModbusDATA[12]=delta4[1];
-
-		taskEXIT_CRITICAL();
-
-		rtEntrada_Control = Setpoint - velocidad_l; //Error para PID
-		control_step(); //Ejecutamos control
-
-		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
-		Linealizacion_step();	//Ejecutamos planta linealizadora
-
-		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion;	//Salida linealizada asignada a CCR
-
-
+//		taskEXIT_CRITICAL();
+//
+//		rtEntrada_Control = Setpoint[1] - velocidad_l[1]; //Error para PID
+//		control_step(); //Ejecutamos control
+//
+//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
+//		Linealizacion_step();	//Ejecutamos planta linealizadora
+//
+//		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion;	//Salida linealizada asignada a CCR
+//
+//
+//		rtEntrada_Control = Setpoint[0] - velocidad_l[0]; //Error para PID
+//		control_step(); //Ejecutamos control
+//
+//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
+//		Linealizacion_step();	//Ejecutamos planta linealizadora
+//
+//		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion;
+		htim1.Instance->CCR2 =ModbusDATA[6];
+		htim1.Instance->CCR1 =ModbusDATA[0];
 
 		//		Codigo para validar control
 		//		taskENTER_CRITICAL();
@@ -884,6 +872,97 @@ void StartTaskControl(void *argument)
 	}
 
   /* USER CODE END StartTaskControl */
+}
+
+/* USER CODE BEGIN Header_StartSpeed2 */
+/**
+ * @brief Function implementing the Speed2 thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartSpeed2 */
+void StartSpeed2(void *argument)
+{
+  /* USER CODE BEGIN StartSpeed2 */
+	uint32_t ticksPrev_l = 0;
+	uint32_t ticksNow_l = 0;
+	uint32_t ticksAux_l = 0;
+	uint32_t deltaTicks_l = 0;
+	uint16_t overflow_l =0;
+	float velocidad_prima2_l = 0;
+	float velocidad_prima1_l = 0;
+	float velocidad_l = 0;
+	/* Infinite loop */
+	for(;;)
+	{
+
+		/* Infinite loop */
+		osSemaphoreAcquire(Semaforo2Handle, osWaitForever);
+		HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin);
+		taskENTER_CRITICAL();
+
+		ticksPrev_l = ticksPrev2;
+		ticksNow_l = ticksNow2;
+		ticksAux_l = ticksAux2;
+		overflow_l = overflow;
+		velocidad_l = velocidad2;
+		velocidad_prima1_l = velocidad2_prima1;
+		velocidad_prima2_l = velocidad2_prima2;
+
+		taskEXIT_CRITICAL();
+
+		//		HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+		if (overflow_l == 0){
+			// Todo cool, calculo normal
+			deltaTicks_l = ticksNow_l - ticksPrev_l;
+			if (deltaTicks_l > tickFilter){
+				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
+				//Filtro IIR
+				velocidad_prima2_l = velocidad_prima1_l;
+				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
+
+				taskENTER_CRITICAL();
+				deltaTicks2 = deltaTicks_l;
+				velocidad2 = velocidad_l;
+				velocidad2_prima1= velocidad_prima1_l;
+				velocidad2_prima2 = velocidad_prima2_l;
+				taskEXIT_CRITICAL();
+			}
+			else{
+				taskENTER_CRITICAL();
+				ticksNow2 = ticksPrev_l;
+				ticksPrev2 = ticksAux_l;
+				taskEXIT_CRITICAL();
+			}
+		} else{
+			// Tuve algun desborde y tengo que tenerlo en cuenta
+			deltaTicks_l = (ticksNow_l + overflow_l * cantTicksTmr2)- ticksPrev_l;/////////////////////////////////////////
+			if (deltaTicks_l > tickFilter){
+				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
+				//Filtro IIR
+				velocidad_prima2_l = velocidad_prima1_l;
+				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
+
+				taskENTER_CRITICAL();
+				overflow = 0;
+				deltaTicks2 = deltaTicks_l;
+				velocidad2 = velocidad_l;
+				velocidad2_prima1 = velocidad_prima1_l;
+				velocidad2_prima2 = velocidad_prima2_l;
+				taskEXIT_CRITICAL();
+			}
+			else{
+				taskENTER_CRITICAL();
+				ticksNow2 = ticksPrev_l;
+				ticksPrev2 = ticksAux_l;
+				taskEXIT_CRITICAL();
+			}
+		}
+		osDelay(1);
+	}
+
+  /* USER CODE END StartSpeed2 */
 }
 
 /**
