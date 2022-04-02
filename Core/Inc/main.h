@@ -72,6 +72,7 @@ void Error_Handler(void);
 #define D03_Encoder_EXTI_IRQn EXTI3_IRQn
 #define D04_Encoder_Pin GPIO_PIN_4
 #define D04_Encoder_GPIO_Port GPIOA
+#define D04_Encoder_EXTI_IRQn EXTI4_IRQn
 #define IN2_1_Pin GPIO_PIN_12
 #define IN2_1_GPIO_Port GPIOB
 #define IN2_2_Pin GPIO_PIN_13

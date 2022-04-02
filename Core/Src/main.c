@@ -45,6 +45,7 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
+#define INA_219_ADDR_M1 (0x41)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -64,7 +65,7 @@ UART_HandleTypeDef huart3;
 osThreadId_t Speed1Handle;
 const osThreadAttr_t Speed1_attributes = {
   .name = "Speed1",
-  .stack_size = 256 * 4,
+  .stack_size = 512 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for Modbus */
@@ -88,6 +89,13 @@ const osThreadAttr_t TaskControl_attributes = {
   .stack_size = 128 * 4,
   .priority = (osPriority_t) osPriorityRealtime,
 };
+/* Definitions for Corriente */
+osThreadId_t CorrienteHandle;
+const osThreadAttr_t Corriente_attributes = {
+  .name = "Corriente",
+  .stack_size = 200 * 4,
+  .priority = (osPriority_t) osPriorityHigh,
+};
 /* Definitions for Semaforo1 */
 osSemaphoreId_t Semaforo1Handle;
 const osSemaphoreAttr_t Semaforo1_attributes = {
@@ -110,6 +118,7 @@ void StartSpeed1(void *argument);
 void StartModbus(void *argument);
 void StartCheckVelocidad(void *argument);
 void StartTaskControl(void *argument);
+void StartCorriente(void *argument);
 
 /* USER CODE BEGIN PFP */
 
@@ -117,7 +126,7 @@ void StartTaskControl(void *argument);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
+HAL_StatusTypeDef ret; // Con ret veo los estados retornados por HAL
 //---------------->  Modbus
 modbusHandler_t ModbusH;
 uint16_t ModbusDATA[24]={'\0'}; // Mapa modbus!
@@ -138,7 +147,105 @@ uint32_t ticksNow[4];
 uint32_t ticksAux[4];
 uint32_t deltaTicks[4];
 
-uint16_t overflow = 0; // Cantidad de desbordes del timer
+uint16_t overflow[4] = {'\0'}; // Cantidad de desbordes del timer
+
+
+float current = 0;
+
+
+void configIna219(uint8_t address,uint16_t to){
+	//	setCalibration_32V_1A();
+	uint32_t ina219_calValue = 10240;
+	HAL_I2C_DeInit(&hi2c1);
+	HAL_I2C_Init(&hi2c1);
+	// Set multipliers to convert raw current/power values
+	//		uint32_t ina219_currentDivider_mA = 25;      // Current LSB = 40uA per bit (1000/40 = 25)
+	//		uint32_t ina219_powerMultiplier_mW = 1;         // Power LSB = 800mW per bit
+
+	// Set Calibration register to 'Cal' calculated above
+	//	   wireWriteRegister(INA219_REG_CALIBRATION, ina219_calValue); // reg value
+	uint8_t reg = 0x05;
+	uint16_t value = ina219_calValue;
+	uint8_t i2c_temp[2];
+	i2c_temp[0] = value>>8;
+	i2c_temp[1] = value;
+	ret = HAL_I2C_Mem_Write(&hi2c1, address<<1, (uint16_t)reg, 1, i2c_temp, 2, to);
+	//I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData, uint16_t Size, uint32_t Timeout
+	osDelay(1);
+		if(ret != HAL_OK){
+//			current = 12345;
+	//		sprintf((char*)buf,"Se rompio en config\r\n");
+	//		HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
+		}
+
+	// Set Config register to take into account the settings above
+	uint16_t config = 8192 | 6144 | 384 | 120 | 7;
+	//			  INA219_CONFIG_BVOLTAGERANGE_32V |
+	//	                    INA219_CONFIG_GAIN_8_320MV |
+	//	                    INA219_CONFIG_BADCRES_12BIT |
+	//	                    INA219_CONFIG_SADCRES_12BIT_1S_532US |
+	//	                    INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
+
+	//	wireWriteRegister(INA219_REG_CONFIG, config);// reg value
+	reg = 0x00;
+	value = config;
+	i2c_temp[0] = value>>8;
+	i2c_temp[1] = value;
+	ret = HAL_I2C_Mem_Write(&hi2c1, address<<1, (uint16_t)reg, 1, i2c_temp, 2, to);
+	//I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData, uint16_t Size, uint32_t Timeout
+	osDelay(1);
+		if(ret != HAL_OK){
+	//			sprintf((char*)buf,"Se rompio en config\r\n");
+	//			HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
+//			current = 23456;
+			}
+}
+
+float getCurrent(uint8_t address, uint16_t to){
+	//		current = getCurrent_mA();
+	//		current = getCurrent_raw();
+	float current;
+
+	uint32_t ina219_calValue = 10240;
+	// Set multipliers to convert raw current/power values
+	uint32_t ina219_currentDivider_mA = 25;      // Current LSB = 40uA per bit (1000/40 = 25)
+	//	uint32_t ina219_powerMultiplier_mW = 1;         // Power LSB = 800mW per bit
+
+	//		wireWriteRegister(INA219_REG_CALIBRATION, ina219_calValue); // reg value
+	uint8_t reg = 0x05;
+	uint16_t value = ina219_calValue;
+	uint8_t i2c_temp[2];
+//	i2c_temp[0] = value>>8;
+//	i2c_temp[1] = value;
+//	ret = HAL_I2C_Mem_Write(&hi2c1, address<<1, (uint16_t)reg, 1, i2c_temp, 2, to);
+//	if(ret != HAL_OK){
+//			//			sprintf((char*)buf,"Se rompio en config\r\n");
+//			//			HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
+//	//				current = 34567;
+////					configIna219(INA_219_ADDR_M1,1); // Config segun el address
+//					}
+	osDelay(1);
+
+	//		wireReadRegister(INA219_REG_CURRENT, &value); // reg *value
+	reg = 0x04;
+	uint16_t *valuee = &value;
+
+	ret = HAL_I2C_Mem_Read(&hi2c1, address<<1, (uint16_t)reg, 1,i2c_temp, 2, to);
+	if(ret != HAL_OK){
+		//			sprintf((char*)buf,"Se rompio en config\r\n");
+		//			HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
+//				current = 34567;
+				configIna219(INA_219_ADDR_M1,100); // Config segun el address
+				}
+	osDelay(1);
+	*valuee = ((uint16_t)i2c_temp[0]<<8 )|(uint16_t)i2c_temp[1];
+	current = (int16_t)value;
+
+	return current /= ina219_currentDivider_mA;
+}
+
+
+
 
 
 void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
@@ -278,6 +385,9 @@ int main(void)
 
   /* creation of TaskControl */
   TaskControlHandle = osThreadNew(StartTaskControl, NULL, &TaskControl_attributes);
+
+  /* creation of Corriente */
+  CorrienteHandle = osThreadNew(StartCorriente, NULL, &Corriente_attributes);
 
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
@@ -576,7 +686,7 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pins : D01_Encoder_Pin D02_Encoder_Pin D03_Encoder_Pin D04_Encoder_Pin */
   GPIO_InitStruct.Pin = D01_Encoder_Pin|D02_Encoder_Pin|D03_Encoder_Pin|D04_Encoder_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING;
-  GPIO_InitStruct.Pull = GPIO_PULLDOWN;
+  GPIO_InitStruct.Pull = GPIO_PULLUP;
   HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /*Configure GPIO pins : IN2_1_Pin IN2_2_Pin IN1_2_Pin IN1_1_Pin
@@ -604,6 +714,9 @@ static void MX_GPIO_Init(void)
 
   HAL_NVIC_SetPriority(EXTI3_IRQn, 5, 0);
   HAL_NVIC_EnableIRQ(EXTI3_IRQn);
+
+  HAL_NVIC_SetPriority(EXTI4_IRQn, 5, 0);
+  HAL_NVIC_EnableIRQ(EXTI4_IRQn);
 
 }
 
@@ -647,24 +760,27 @@ void StartSpeed1(void *argument)
 		{
 			valor = 0;
 		}
-		if (flags_motores_l[1] == 1)
+		else if (flags_motores_l[1] == 1)
 		{
 			valor = 1;
 		}
-		if (flags_motores_l[2] == 1)
+		else if (flags_motores_l[2] == 1)
 		{
 			valor = 2;
 		}
-		if (flags_motores_l[3] == 1)
+		else if (flags_motores_l[3] == 1)
 		{
 			valor = 3;
 		}
+
+
+
 
 		taskENTER_CRITICAL();
 		ticksPrev_l = ticksPrev[valor];
 		ticksNow_l = ticksNow[valor];
 		ticksAux_l = ticksAux[valor];
-		overflow_l = overflow;
+		overflow_l = overflow[valor];
 		velocidad_l = velocidad[valor];
 		velocidad_prima1_l = velocidad_prima1[valor];
 		velocidad_prima2_l = velocidad_prima2[valor];
@@ -704,7 +820,7 @@ void StartSpeed1(void *argument)
 				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
 
 				taskENTER_CRITICAL();
-				overflow = 0;
+				overflow[valor] = 0;
 				deltaTicks[valor] = deltaTicks_l;
 				velocidad[valor] = velocidad_l;
 				velocidad_prima1[valor] = velocidad_prima1_l;
@@ -719,6 +835,7 @@ void StartSpeed1(void *argument)
 			}
 		}
 		taskENTER_CRITICAL();
+		flags_motores_l[valor] = 0;
 		flags_motores[valor] = 0;
 		taskEXIT_CRITICAL();
 		osDelay(1);
@@ -738,28 +855,46 @@ void StartModbus(void *argument)
   /* USER CODE BEGIN StartModbus */
 	uint16_t delta1[2];// para mandar los deltaticks
 	uint16_t delta2[2];
+	uint16_t delta3[2];
+	uint16_t delta4[2];
+	uint16_t delta5[2];
 	//	uint16_t delta3[2];
 	//	uint16_t delta4[2];
 
-	float velocidad1;
-	float velocidad2;
+	float velocidad[4]={'\0'};
 	uint16_t ModbusDATA_l[24] = {'\0'};
 	/* Infinite loop */
 	for(;;)
 	{
 		taskENTER_CRITICAL();
-		velocidad1 = velocidad_prima1[0];
-		velocidad2 = velocidad_prima1[1];
+		velocidad[0] = velocidad_prima1[0];
+		velocidad[1] = velocidad_prima1[1];
+		velocidad[2] = velocidad_prima1[2];
+		velocidad[3] = velocidad_prima1[3];
 		taskEXIT_CRITICAL();
 
 
-		memcpy(delta1, &velocidad1, sizeof(velocidad1));
+		memcpy(delta1, &velocidad[0], sizeof(velocidad[0]));
 		ModbusDATA_l[2]=delta1[0];
 		ModbusDATA_l[3]=delta1[1];
 
-		memcpy(delta2, &velocidad2, sizeof(velocidad2));
+		memcpy(delta2, &velocidad[1], sizeof(velocidad[1]));
 		ModbusDATA_l[8]=delta2[0];
 		ModbusDATA_l[9]=delta2[1];
+
+		memcpy(delta3, &velocidad[2], sizeof(velocidad[2]));
+		ModbusDATA_l[14]=delta3[0];
+		ModbusDATA_l[15]=delta3[1];
+
+		memcpy(delta4, &velocidad[3], sizeof(velocidad[3]));
+		ModbusDATA_l[20]=delta4[0];
+		ModbusDATA_l[21]=delta4[1];
+
+
+		//Corriente
+		memcpy(delta5, &current, sizeof(current));
+		ModbusDATA_l[10]=delta5[0];
+		ModbusDATA_l[11]=delta5[1];
 
 
 		taskENTER_CRITICAL();
@@ -801,25 +936,54 @@ void StartCheckVelocidad(void *argument)
 {
   /* USER CODE BEGIN StartCheckVelocidad */
 
-	uint16_t overflow_l =0;
+	uint16_t overflow_l[4] ={'\0'};
 
 	/* Infinite loop */
 	for(;;)
 	{
-		//		taskENTER_CRITICAL();
-		//		overflow_l = overflow;
-		//		taskEXIT_CRITICAL();
-		//
-		//		if(overflow_l >= 3){
-		//			overflow_l = 0;
-		//			taskENTER_CRITICAL();
-		//			overflow = 0;
-		//			velocidad_prima2[1] = 0;
-		//			velocidad_prima1[1] = 0;
-		//			velocidad[1] = 0;
-		//			taskEXIT_CRITICAL();
+		taskENTER_CRITICAL();
+		overflow_l[0] = overflow[0];
+		overflow_l[1] = overflow[1];
+		overflow_l[2] = overflow[2];
+		overflow_l[3] = overflow[3];
+		taskEXIT_CRITICAL();
 
-		//		}
+		if(overflow_l[0] >= 3){
+			overflow_l[0] = 0;
+			taskENTER_CRITICAL();
+			overflow[0] = 0;
+			velocidad_prima2[0] = 0;
+			velocidad_prima1[0] = 0;
+			velocidad[0] = 0;
+			taskEXIT_CRITICAL();
+		}
+		if(overflow_l[1] >= 3){
+			overflow_l[1] = 0;
+			taskENTER_CRITICAL();
+			overflow[1] = 0;
+			velocidad_prima2[1] = 0;
+			velocidad_prima1[1] = 0;
+			velocidad[1] = 0;
+			taskEXIT_CRITICAL();
+		}
+		if(overflow_l[2] >= 3){
+			overflow_l[2] = 0;
+			taskENTER_CRITICAL();
+			overflow[2] = 0;
+			velocidad_prima2[2] = 0;
+			velocidad_prima1[2] = 0;
+			velocidad[2] = 0;
+			taskEXIT_CRITICAL();
+		}
+		if(overflow_l[3] >= 3){
+			overflow_l[3] = 0;
+			taskENTER_CRITICAL();
+			overflow[3] = 0;
+			velocidad_prima2[3] = 0;
+			velocidad_prima1[3] = 0;
+			velocidad[3] = 0;
+			taskEXIT_CRITICAL();
+		}
 		osDelay(5);
 	}
   /* USER CODE END StartCheckVelocidad */
@@ -843,32 +1007,51 @@ void StartTaskControl(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
-		//		taskENTER_CRITICAL();
-		//		velocidad_l[0] = velocidad[0];
-		//		Setpoint[0] = ModbusDATA[0]/1000.0;
-		//		velocidad_l[1] = velocidad[1];
-		//		Setpoint[1] = ModbusDATA[6]/1000.0;
+		taskENTER_CRITICAL();
+		velocidad_l[0] = velocidad[0];
+		velocidad_l[1] = velocidad[1];
+		velocidad_l[2] = velocidad[2];
+		velocidad_l[3] = velocidad[3];
 
-		//		taskEXIT_CRITICAL();
-		//
-		//		rtEntrada_Control = Setpoint[1] - velocidad_l[1]; //Error para PID
-		//		control_step(); //Ejecutamos control
-		//
-		//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
-		//		Linealizacion_step();	//Ejecutamos planta linealizadora
-		//
-		//		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion;	//Salida linealizada asignada a CCR
-		//
-		//
-		//		rtEntrada_Control = Setpoint[0] - velocidad_l[0]; //Error para PID
-		//		control_step(); //Ejecutamos control
-		//
-		//		rtEntrada_Linealizacion = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
-		//		Linealizacion_step();	//Ejecutamos planta linealizadora
-		//
-		//		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion;
-		htim1.Instance->CCR2 =ModbusDATA[6];
-		htim1.Instance->CCR1 =ModbusDATA[0];
+		Setpoint[0] = (float)ModbusDATA[0]/1000.0;
+		Setpoint[1] = (float)ModbusDATA[6]/1000.0;
+		Setpoint[2] = (float)ModbusDATA[12]/1000.0;
+		Setpoint[3] = (float)ModbusDATA[18]/1000.0;
+
+		taskEXIT_CRITICAL();
+
+		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
+		rtEntrada_Control2 = Setpoint[1] - velocidad_l[1];
+		rtEntrada_Control3 = Setpoint[2] - velocidad_l[2];
+		rtEntrada_Control4 = Setpoint[3] - velocidad_l[3];
+		control_step(); //Ejecutamos control
+
+		rtEntrada_Linealizacion1 = rtSalida_Control1;	//Salida PID asignada a entrada de planta linealizadora
+		rtEntrada_Linealizacion2 = rtSalida_Control2;
+		rtEntrada_Linealizacion3 = rtSalida_Control3;
+		rtEntrada_Linealizacion4 = rtSalida_Control4;
+
+		Linealizacion_step();	//Ejecutamos planta linealizadora
+
+		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion1;	//Salida linealizada asignada a CCR
+		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion2;
+		htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion3;
+		htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion4;
+
+		//		if (htim1.Instance->CCR1 != ModbusDATA[0]){
+		//			htim1.Instance->CCR1 = ModbusDATA[0];
+		//		}
+		//		if (htim1.Instance->CCR2 != ModbusDATA[6]){
+		//			htim1.Instance->CCR2 = ModbusDATA[6];
+		//		}
+		//		if (htim1.Instance->CCR3 != ModbusDATA[12]){
+		//			htim1.Instance->CCR3 = ModbusDATA[12];
+		//		}
+		//		if (htim1.Instance->CCR4 != ModbusDATA[18]){
+		//			htim1.Instance->CCR4 = ModbusDATA[18];
+		//		}
+
+
 
 		//		Codigo para validar control
 		//		taskENTER_CRITICAL();
@@ -902,6 +1085,41 @@ void StartTaskControl(void *argument)
   /* USER CODE END StartTaskControl */
 }
 
+/* USER CODE BEGIN Header_StartCorriente */
+/**
+ * @brief Function implementing the Corriente thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_StartCorriente */
+void StartCorriente(void *argument)
+{
+  /* USER CODE BEGIN StartCorriente */
+	/* Infinite loop */
+	float current_l = 0;
+	float corriente_prima2_l = 0;
+	float corriente_prima1_l = 0;
+	configIna219(INA_219_ADDR_M1,100); // Config segun el address
+		for(;;)
+		{
+			current_l = getCurrent(INA_219_ADDR_M1,100);
+
+//			corriente_prima2_l = corriente_prima1_l;
+//			corriente_prima1_l = 0.9*corriente_prima2_l + 0.1*current_l;
+
+			taskENTER_CRITICAL();
+//			current = corriente_prima1_l;
+			current = current_l;
+			taskEXIT_CRITICAL();
+
+
+
+			osDelay(70);
+
+		}
+  /* USER CODE END StartCorriente */
+}
+
 /**
   * @brief  Period elapsed callback in non blocking mode
   * @note   This function is called  when TIM4 interrupt took place, inside
@@ -918,10 +1136,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-	if(htim->Instance == TIM2){
-		overflow += 1;
+		if(htim->Instance == TIM2){
+			overflow[0] += 1;
+			overflow[1] += 1;
+			overflow[2] += 1;
+			overflow[3] += 1;
 
-	}
+
+		}
   /* USER CODE END Callback 1 */
 }
 
@@ -932,11 +1154,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-	/* User can add his own implementation to report the HAL error return state */
-	__disable_irq();
-	while (1)
-	{
-	}
+		/* User can add his own implementation to report the HAL error return state */
+		__disable_irq();
+		while (1)
+		{
+		}
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -951,7 +1173,7 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-	/* User can add his own implementation to report the file name and line number,
+		/* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
