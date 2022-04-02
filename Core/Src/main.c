@@ -153,6 +153,77 @@ uint16_t overflow[4] = {'\0'}; // Cantidad de desbordes del timer
 float current = 0;
 
 
+void Sentido(uint8_t valor,uint8_t motor){
+	//Motor gira en un sentido
+	if(motor == 1){
+		if(valor == 0){
+			HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, SET);
+			HAL_GPIO_WritePin(IN1_2_GPIO_Port, IN1_2_Pin, RESET);
+		}
+		//Motor gira en otro sentido
+		else if(valor == 1){
+			HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN1_2_GPIO_Port, IN1_2_Pin, SET);
+
+		}
+		else{ // Break
+			HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN1_2_GPIO_Port, IN1_2_Pin, RESET);
+		}
+	}
+	if(motor == 2){
+		if(valor == 0){
+			HAL_GPIO_WritePin(IN2_1_GPIO_Port, IN2_1_Pin, SET);
+			HAL_GPIO_WritePin(IN2_2_GPIO_Port, IN2_2_Pin, RESET);
+		}
+		//Motor gira en otro sentido
+		else if(valor == 1){
+			HAL_GPIO_WritePin(IN2_1_GPIO_Port, IN2_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN2_2_GPIO_Port, IN2_2_Pin, SET);
+
+		}
+		else{ // Break
+			HAL_GPIO_WritePin(IN2_1_GPIO_Port, IN2_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN2_2_GPIO_Port, IN2_2_Pin, RESET);
+		}
+
+	}
+	if(motor == 3){
+		if(valor == 0){
+			HAL_GPIO_WritePin(IN3_1_GPIO_Port, IN3_1_Pin, SET);
+			HAL_GPIO_WritePin(IN3_2_GPIO_Port, IN3_2_Pin, RESET);
+		}
+		//Motor gira en otro sentido
+		else if(valor == 1){
+			HAL_GPIO_WritePin(IN3_1_GPIO_Port, IN3_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN3_2_GPIO_Port, IN3_2_Pin, SET);
+
+		}
+		else{ // Break
+			HAL_GPIO_WritePin(IN3_1_GPIO_Port, IN3_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN3_2_GPIO_Port, IN3_2_Pin, RESET);
+		}
+	}
+	if(motor == 4){
+		if(valor == 0){
+			HAL_GPIO_WritePin(IN4_1_GPIO_Port, IN4_1_Pin, SET);
+			HAL_GPIO_WritePin(IN4_2_GPIO_Port, IN4_2_Pin, RESET);
+		}
+		//Motor gira en otro sentido
+		else if(valor == 1){
+			HAL_GPIO_WritePin(IN4_1_GPIO_Port, IN4_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN3_2_GPIO_Port, IN4_2_Pin, SET);
+
+		}
+		else{ // Break
+			HAL_GPIO_WritePin(IN4_1_GPIO_Port, IN4_1_Pin, RESET);
+			HAL_GPIO_WritePin(IN4_2_GPIO_Port, IN4_2_Pin, RESET);
+		}
+	}
+
+}
+
+
 void configIna219(uint8_t address,uint16_t to){
 	//	setCalibration_32V_1A();
 	uint32_t ina219_calValue = 10240;
@@ -795,7 +866,7 @@ void StartSpeed1(void *argument)
 				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
 				//Filtro IIR
 				velocidad_prima2_l = velocidad_prima1_l;
-				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
+				velocidad_prima1_l = 0.6*velocidad_prima2_l + 0.4*velocidad_l;
 
 				taskENTER_CRITICAL();
 				deltaTicks[valor] = deltaTicks_l;
@@ -817,7 +888,7 @@ void StartSpeed1(void *argument)
 				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
 				//Filtro IIR
 				velocidad_prima2_l = velocidad_prima1_l;
-				velocidad_prima1_l = 0.7*velocidad_prima2_l + 0.3*velocidad_l;
+				velocidad_prima1_l = 0.6*velocidad_prima2_l + 0.4*velocidad_l;
 
 				taskENTER_CRITICAL();
 				overflow[valor] = 0;
@@ -834,6 +905,13 @@ void StartSpeed1(void *argument)
 				taskEXIT_CRITICAL();
 			}
 		}
+
+		if (valor == 2 && current > 0 ){
+			taskENTER_CRITICAL();
+			velocidad[valor] = -velocidad[valor];
+			taskEXIT_CRITICAL();
+		}
+
 		taskENTER_CRITICAL();
 		flags_motores_l[valor] = 0;
 		flags_motores[valor] = 0;
@@ -1001,6 +1079,7 @@ void StartTaskControl(void *argument)
   /* USER CODE BEGIN StartTaskControl */
 	float velocidad_l[4]={'\0'};
 	float Setpoint[4] = {'\0'};
+	uint16_t Sentido_l[4]={'\0'};
 
 	//	float error=0;
 
@@ -1018,13 +1097,47 @@ void StartTaskControl(void *argument)
 		Setpoint[2] = (float)ModbusDATA[12]/1000.0;
 		Setpoint[3] = (float)ModbusDATA[18]/1000.0;
 
+		Sentido_l[0] = ModbusDATA[1];
+		Sentido_l[1] = ModbusDATA[7];
+		Sentido_l[2] = ModbusDATA[13];
+		Sentido_l[3] = ModbusDATA[19];
 		taskEXIT_CRITICAL();
+
+		if(Sentido_l[1] == 1 && current > 5){
+			Sentido(0, 2);
+			Setpoint[1] = -Setpoint[1];
+		}
+
+		if(Sentido_l[1] == 1 && current <= 5){
+			Sentido(1, 2);
+			Setpoint[1] = Setpoint[1];
+		}
+
+		if(Sentido_l[1] == 0 && current <= -5){
+			Sentido(1, 2);
+			Setpoint[1] = -Setpoint[1];
+		}
+
+		if(Sentido_l[1] == 0 && current > -5){
+			Sentido(0, 2);
+			Setpoint[1] = Setpoint[1];
+		}
+
+//		if (current <= 0){
+//			velocidad_l[1] = -velocidad_l[1];
+//		}
+
 
 		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
 		rtEntrada_Control2 = Setpoint[1] - velocidad_l[1];
 		rtEntrada_Control3 = Setpoint[2] - velocidad_l[2];
 		rtEntrada_Control4 = Setpoint[3] - velocidad_l[3];
 		control_step(); //Ejecutamos control
+
+
+//		if (rtSalida_Control1 < 0){
+//			Sentido(1, 2);
+//		}
 
 		rtEntrada_Linealizacion1 = rtSalida_Control1;	//Salida PID asignada a entrada de planta linealizadora
 		rtEntrada_Linealizacion2 = rtSalida_Control2;
@@ -1097,18 +1210,11 @@ void StartCorriente(void *argument)
   /* USER CODE BEGIN StartCorriente */
 	/* Infinite loop */
 	float current_l = 0;
-	float corriente_prima2_l = 0;
-	float corriente_prima1_l = 0;
 	configIna219(INA_219_ADDR_M1,100); // Config segun el address
 		for(;;)
 		{
 			current_l = getCurrent(INA_219_ADDR_M1,100);
-
-//			corriente_prima2_l = corriente_prima1_l;
-//			corriente_prima1_l = 0.9*corriente_prima2_l + 0.1*current_l;
-
 			taskENTER_CRITICAL();
-//			current = corriente_prima1_l;
 			current = current_l;
 			taskEXIT_CRITICAL();
 
