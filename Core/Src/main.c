@@ -936,8 +936,6 @@ void StartModbus(void *argument)
 	uint16_t delta3[2];
 	uint16_t delta4[2];
 	uint16_t delta5[2];
-	//	uint16_t delta3[2];
-	//	uint16_t delta4[2];
 
 	float velocidad[4]={'\0'};
 	uint16_t ModbusDATA_l[24] = {'\0'};
@@ -1087,10 +1085,10 @@ void StartTaskControl(void *argument)
 	for(;;)
 	{
 		taskENTER_CRITICAL();
-		velocidad_l[0] = velocidad[0];
-		velocidad_l[1] = velocidad[1];
-		velocidad_l[2] = velocidad[2];
-		velocidad_l[3] = velocidad[3];
+		velocidad_l[0] = velocidad_prima1[0];
+		velocidad_l[1] = velocidad_prima1[1];
+		velocidad_l[2] = velocidad_prima1[2];
+		velocidad_l[3] = velocidad_prima1[3];
 
 		Setpoint[0] = (float)ModbusDATA[0]/1000.0;
 		Setpoint[1] = (float)ModbusDATA[6]/1000.0;
@@ -1103,22 +1101,22 @@ void StartTaskControl(void *argument)
 		Sentido_l[3] = ModbusDATA[19];
 		taskEXIT_CRITICAL();
 
-		if(Sentido_l[1] == 1 && current > 5){
+		if(Sentido_l[1] == 1 && current > 10){
 			Sentido(0, 2);
 			Setpoint[1] = -Setpoint[1];
 		}
 
-		if(Sentido_l[1] == 1 && current <= 5){
+		if(Sentido_l[1] == 1 && current <= 10){
 			Sentido(1, 2);
 			Setpoint[1] = Setpoint[1];
 		}
 
-		if(Sentido_l[1] == 0 && current <= -5){
+		if(Sentido_l[1] == 0 && current <= -10){
 			Sentido(1, 2);
 			Setpoint[1] = -Setpoint[1];
 		}
 
-		if(Sentido_l[1] == 0 && current > -5){
+		if(Sentido_l[1] == 0 && current > -10){
 			Sentido(0, 2);
 			Setpoint[1] = Setpoint[1];
 		}
