@@ -40,7 +40,15 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/queue.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/timers.h \
  ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h \
- ../Core/Inc/ModbusConfig.h
+ ../Core/Inc/ModbusConfig.h \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/Linealizacion.c \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/Linealizacion.h \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/rtwtypes.h \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/Linealizacion.h \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/control.c \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/control.h \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/rtwtypes.h \
+ D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/control.h
 
 ../Core/Inc/main.h:
 
@@ -129,3 +137,19 @@ Core/Src/main.o: ../Core/Src/main.c ../Core/Inc/main.h \
 ../Middlewares/Third_Party/FreeRTOS/Source/include/task.h:
 
 ../Core/Inc/ModbusConfig.h:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/Linealizacion.c:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/Linealizacion.h:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/rtwtypes.h:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/Linealizacion_ert_rtw/Linealizacion.h:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/control.c:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/control.h:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/rtwtypes.h:
+
+D:/Facu/Facultad/Tesis/codes/Main\ code/SpeedTest/Testeo_velocidad/Simulink/control_ert_rtw/control.h:
