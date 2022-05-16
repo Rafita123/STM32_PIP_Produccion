@@ -45,7 +45,6 @@
 
 /* Private define ------------------------------------------------------------*/
 /* USER CODE BEGIN PD */
-#define INA_219_ADDR_M1 (0x41)
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -93,7 +92,7 @@ const osThreadAttr_t TaskControl_attributes = {
 osThreadId_t CorrienteHandle;
 const osThreadAttr_t Corriente_attributes = {
   .name = "Corriente",
-  .stack_size = 200 * 4,
+  .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
 /* Definitions for Semaforo1 */
@@ -103,7 +102,31 @@ const osSemaphoreAttr_t Semaforo1_attributes = {
 };
 /* USER CODE BEGIN PV */
 
-//INA219_t ina219;
+//	Registers
+//
+#define	INA219_REG_CONFIG						(0x00)
+#define	INA219_REG_SHUNTVOLTAGE					(0x01)
+#define	INA219_REG_BUSVOLTAGE					(0x02)
+#define	INA219_REG_POWER						(0x03)
+#define	INA219_REG_CURRENT						(0x04)
+#define	INA219_REG_CALIBRATION					(0x05)
+
+#define INA219_CONFIG_BVOLTAGERANGE_32V			(0x2000) // 0-32V Range
+#define	INA219_CONFIG_GAIN_8_320MV				(0x1800) // Gain 8, 320mV Range
+#define	INA219_CONFIG_BADCRES_12BIT				(0x0180) // 12-bit bus res = 0..4097
+#define	INA219_CONFIG_SADCRES_12BIT_64S_34MS	(0x0070) // 64 x 12-bit shunt samples averaged together
+#define INA219_CONFIG_SADCRES_12BIT_128S_69MS    (0x0078) // 128 x 12-bit shunt samples averaged together
+#define	INA219_CONFIG_MODE_SVOLT_CONTINUOUS		(0x05) /**< shunt voltage continuous */
+
+//
+//	Addresses
+//
+#define INA219_ADDRESS_0 (0x40)
+#define INA219_ADDRESS_1 (0x41)
+#define INA219_ADDRESS_2 (0x44)
+#define INA219_ADDRESS_3 (0x45)
+
+
 
 /* USER CODE END PV */
 
@@ -151,6 +174,12 @@ uint16_t overflow[4] = {'\0'}; // Cantidad de desbordes del timer
 
 
 float current = 0;
+
+
+
+
+
+
 
 
 void Sentido(uint8_t valor,uint8_t motor){
@@ -223,7 +252,7 @@ void Sentido(uint8_t valor,uint8_t motor){
 
 }
 
-
+/*
 void configIna219(uint8_t address,uint16_t to){
 	//	setCalibration_32V_1A();
 	uint32_t ina219_calValue = 10240;
@@ -306,7 +335,7 @@ float getCurrent(uint8_t address, uint16_t to){
 		//			sprintf((char*)buf,"Se rompio en config\r\n");
 		//			HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
 //				current = 34567;
-				configIna219(INA_219_ADDR_M1,100); // Config segun el address
+				configIna219(address,to); // Config segun el address
 				}
 	osDelay(1);
 	*valuee = ((uint16_t)i2c_temp[0]<<8 )|(uint16_t)i2c_temp[1];
@@ -314,9 +343,66 @@ float getCurrent(uint8_t address, uint16_t to){
 
 	return current /= ina219_currentDivider_mA;
 }
+*/
+
+void configIna219(uint8_t address, uint16_t TO){
+
+	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_32V |
+		             INA219_CONFIG_GAIN_8_320MV | INA219_CONFIG_BADCRES_12BIT |
+					 INA219_CONFIG_SADCRES_12BIT_128S_69MS |
+					 INA219_CONFIG_MODE_SVOLT_CONTINUOUS;
+
+	uint16_t ina219_calibrationValue = 4096;
+//	int16_t ina219_currentDivider_mA = 10; // Current LSB = 100uA per bit (1000/100 = 10)
+//	int16_t ina219_powerMultiplier_mW = 2; // Power LSB = 1mW per bit (2/1)
+
+//	INA219_setCalibration(ina219, ina219_calibrationValue);//(&hi2c1,ina219_calibrationValue)
+	// --> Write16(ina219, INA219_REG_CALIBRATION, CalibrationData);(&hi2c1,INA219_REG_CALIBRATION,ina219_calibrationValue)
+	uint8_t addr[2];
+	addr[0] = (ina219_calibrationValue >> 8) & 0xff;  // upper byte
+	addr[1] = (ina219_calibrationValue >> 0) & 0xff; // lower byte
+	HAL_I2C_Mem_Write(&hi2c1, (address<<1), INA219_REG_CALIBRATION, 1, (uint8_t*)addr, 2, TO);
 
 
 
+//	INA219_setConfig(ina219, config);
+//	void INA219_setConfig(INA219_t *ina219, uint16_t Config)
+//	--> Write16(ina219, INA219_REG_CONFIG, Config);
+	addr[0] = (config >> 8) & 0xff;  // upper byte
+	addr[1] = (config >> 0) & 0xff; // lower byte
+	HAL_I2C_Mem_Write(&hi2c1, (address<<1), INA219_REG_CONFIG, 1, (uint8_t*)addr, 2, TO);
+}
+
+float getCurrent(uint8_t address, uint16_t TO){
+
+	float current;
+//	char buf [32] = {'\0'};
+	uint8_t Value[2];
+	int16_t result;
+	int16_t ina219_currentDivider_mA = 10;
+
+//	int16_t result = INA219_ReadCurrent_raw(ina219); // read en INA219_REG_CURRENT
+	ret = HAL_I2C_IsDeviceReady(&hi2c1, address, 3, 1);
+	if(ret != HAL_OK){
+		ret = HAL_I2C_Mem_Read(&hi2c1, (address<<1), INA219_REG_CURRENT, 1, Value, 2, TO);
+
+		if(ret != HAL_OK){ // Error control
+//			sprintf((char*)buf,"Shit, status: %u", (uint8_t)ret);
+//			HAL_UART_Transmit(&huart3, buf, strlen((char*)buf), 100);
+			HAL_I2C_DeInit(&hi2c1);
+			HAL_I2C_Init(&hi2c1);
+			configIna219(address,TO);
+		}
+
+		result = ((Value[0] << 8) | Value[1]); // RawCurrent
+
+		current = ((float)result / (float)ina219_currentDivider_mA);
+
+		return current;
+	}else{
+		return (float)5.5;
+	}
+}
 
 
 void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
@@ -1103,22 +1189,22 @@ void StartTaskControl(void *argument)
 		Sentido_l[3] = ModbusDATA[19];
 		taskEXIT_CRITICAL();
 
-		if(Sentido_l[1] == 1 && current > 5){
+		if(Sentido_l[1] == 1 && current > 15){
 			Sentido(0, 2);
 			Setpoint[1] = -Setpoint[1];
 		}
 
-		if(Sentido_l[1] == 1 && current <= 5){
+		if(Sentido_l[1] == 1 && current <= 15){
 			Sentido(1, 2);
 			Setpoint[1] = Setpoint[1];
 		}
 
-		if(Sentido_l[1] == 0 && current <= -5){
+		if(Sentido_l[1] == 0 && current <= -15){
 			Sentido(1, 2);
 			Setpoint[1] = -Setpoint[1];
 		}
 
-		if(Sentido_l[1] == 0 && current > -5){
+		if(Sentido_l[1] == 0 && current > -15){
 			Sentido(0, 2);
 			Setpoint[1] = Setpoint[1];
 		}
@@ -1210,10 +1296,13 @@ void StartCorriente(void *argument)
   /* USER CODE BEGIN StartCorriente */
 	/* Infinite loop */
 	float current_l = 0;
-	configIna219(INA_219_ADDR_M1,100); // Config segun el address
+	uint16_t timeOut = 10;
+	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
 		for(;;)
 		{
-			current_l = getCurrent(INA_219_ADDR_M1,100);
+			current_l = getCurrent(INA219_ADDRESS_2,timeOut);
+
+
 			taskENTER_CRITICAL();
 			current = current_l;
 			taskEXIT_CRITICAL();
