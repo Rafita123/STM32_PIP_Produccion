@@ -114,17 +114,28 @@ const osSemaphoreAttr_t Semaforo1_attributes = {
 #define INA219_CONFIG_BVOLTAGERANGE_32V			(0x2000) // 0-32V Range
 #define	INA219_CONFIG_GAIN_8_320MV				(0x1800) // Gain 8, 320mV Range
 #define	INA219_CONFIG_BADCRES_12BIT				(0x0180) // 12-bit bus res = 0..4097
+
+#define	INA219_CONFIG_SADCRES_9BIT_1S_84US		(0x0000) // 1 x 9-bit shunt sample
+#define	INA219_CONFIG_SADCRES_10BIT_1S_148US	(0x0008) // 1 x 10-bit shunt sample
+#define	INA219_CONFIG_SADCRES_11BIT_1S_276US	(0x0010) // 1 x 11-bit shunt sample
+#define	INA219_CONFIG_SADCRES_12BIT_1S_532US	(0x0018) // 1 x 12-bit shunt sample
+#define	INA219_CONFIG_SADCRES_12BIT_2S_1060US	(0x0048) // 2 x 12-bit shunt samples averaged together
+#define	INA219_CONFIG_SADCRES_12BIT_4S_2130US	(0x0050) // 4 x 12-bit shunt samples averaged together
+#define	INA219_CONFIG_SADCRES_12BIT_8S_4260US	(0x0058) // 8 x 12-bit shunt samples averaged together
+#define	INA219_CONFIG_SADCRES_12BIT_16S_8510US	(0x0060) // 16 x 12-bit shunt samples averaged together
+#define	INA219_CONFIG_SADCRES_12BIT_32S_17MS	(0x0068) // 32 x 12-bit shunt samples averaged together
 #define	INA219_CONFIG_SADCRES_12BIT_64S_34MS	(0x0070) // 64 x 12-bit shunt samples averaged together
-#define INA219_CONFIG_SADCRES_12BIT_128S_69MS    (0x0078) // 128 x 12-bit shunt samples averaged together
+#define	INA219_CONFIG_SADCRES_12BIT_128S_69MS	(0x0078) // 128 x 12-bit shunt samples averaged together
+
 #define	INA219_CONFIG_MODE_SVOLT_CONTINUOUS		(0x05) /**< shunt voltage continuous */
 
 //
 //	Addresses
 //
-#define INA219_ADDRESS_0 (0x40)
-#define INA219_ADDRESS_1 (0x41)
-#define INA219_ADDRESS_2 (0x44)
-#define INA219_ADDRESS_3 (0x45)
+#define INA219_ADDRESS_0 (0x40) // Nada puenteado
+#define INA219_ADDRESS_1 (0x41) // A0 puenteado
+#define INA219_ADDRESS_2 (0x44) // A1 puenteado
+#define INA219_ADDRESS_3 (0x45) // A0 y A1 puenteados
 
 
 
@@ -252,99 +263,6 @@ void Sentido(uint8_t valor,uint8_t motor){
 
 }
 
-/*
-void configIna219(uint8_t address,uint16_t to){
-	//	setCalibration_32V_1A();
-	uint32_t ina219_calValue = 10240;
-	HAL_I2C_DeInit(&hi2c1);
-	HAL_I2C_Init(&hi2c1);
-	// Set multipliers to convert raw current/power values
-	//		uint32_t ina219_currentDivider_mA = 25;      // Current LSB = 40uA per bit (1000/40 = 25)
-	//		uint32_t ina219_powerMultiplier_mW = 1;         // Power LSB = 800mW per bit
-
-	// Set Calibration register to 'Cal' calculated above
-	//	   wireWriteRegister(INA219_REG_CALIBRATION, ina219_calValue); // reg value
-	uint8_t reg = 0x05;
-	uint16_t value = ina219_calValue;
-	uint8_t i2c_temp[2];
-	i2c_temp[0] = value>>8;
-	i2c_temp[1] = value;
-	ret = HAL_I2C_Mem_Write(&hi2c1, address<<1, (uint16_t)reg, 1, i2c_temp, 2, to);
-	//I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData, uint16_t Size, uint32_t Timeout
-	osDelay(1);
-		if(ret != HAL_OK){
-//			current = 12345;
-	//		sprintf((char*)buf,"Se rompio en config\r\n");
-	//		HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
-		}
-
-	// Set Config register to take into account the settings above
-	uint16_t config = 8192 | 6144 | 384 | 120 | 7;
-	//			  INA219_CONFIG_BVOLTAGERANGE_32V |
-	//	                    INA219_CONFIG_GAIN_8_320MV |
-	//	                    INA219_CONFIG_BADCRES_12BIT |
-	//	                    INA219_CONFIG_SADCRES_12BIT_1S_532US |
-	//	                    INA219_CONFIG_MODE_SANDBVOLT_CONTINUOUS;
-
-	//	wireWriteRegister(INA219_REG_CONFIG, config);// reg value
-	reg = 0x00;
-	value = config;
-	i2c_temp[0] = value>>8;
-	i2c_temp[1] = value;
-	ret = HAL_I2C_Mem_Write(&hi2c1, address<<1, (uint16_t)reg, 1, i2c_temp, 2, to);
-	//I2C_HandleTypeDef *hi2c, uint16_t DevAddress, uint16_t MemAddress, uint16_t MemAddSize, uint8_t *pData, uint16_t Size, uint32_t Timeout
-	osDelay(1);
-		if(ret != HAL_OK){
-	//			sprintf((char*)buf,"Se rompio en config\r\n");
-	//			HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
-//			current = 23456;
-			}
-}
-
-float getCurrent(uint8_t address, uint16_t to){
-	//		current = getCurrent_mA();
-	//		current = getCurrent_raw();
-	float current;
-
-	uint32_t ina219_calValue = 10240;
-	// Set multipliers to convert raw current/power values
-	uint32_t ina219_currentDivider_mA = 25;      // Current LSB = 40uA per bit (1000/40 = 25)
-	//	uint32_t ina219_powerMultiplier_mW = 1;         // Power LSB = 800mW per bit
-
-	//		wireWriteRegister(INA219_REG_CALIBRATION, ina219_calValue); // reg value
-	uint8_t reg = 0x05;
-	uint16_t value = ina219_calValue;
-	uint8_t i2c_temp[2];
-//	i2c_temp[0] = value>>8;
-//	i2c_temp[1] = value;
-//	ret = HAL_I2C_Mem_Write(&hi2c1, address<<1, (uint16_t)reg, 1, i2c_temp, 2, to);
-//	if(ret != HAL_OK){
-//			//			sprintf((char*)buf,"Se rompio en config\r\n");
-//			//			HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
-//	//				current = 34567;
-////					configIna219(INA_219_ADDR_M1,1); // Config segun el address
-//					}
-	osDelay(1);
-
-	//		wireReadRegister(INA219_REG_CURRENT, &value); // reg *value
-	reg = 0x04;
-	uint16_t *valuee = &value;
-
-	ret = HAL_I2C_Mem_Read(&hi2c1, address<<1, (uint16_t)reg, 1,i2c_temp, 2, to);
-	if(ret != HAL_OK){
-		//			sprintf((char*)buf,"Se rompio en config\r\n");
-		//			HAL_UART_Transmit(&huart1, buf, strlen((char*)buf), 1000);
-//				current = 34567;
-				configIna219(address,to); // Config segun el address
-				}
-	osDelay(1);
-	*valuee = ((uint16_t)i2c_temp[0]<<8 )|(uint16_t)i2c_temp[1];
-	current = (int16_t)value;
-
-	return current /= ina219_currentDivider_mA;
-}
-*/
-
 void configIna219(uint8_t address, uint16_t TO){
 
 	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_32V |
@@ -353,11 +271,8 @@ void configIna219(uint8_t address, uint16_t TO){
 					 INA219_CONFIG_MODE_SVOLT_CONTINUOUS;
 
 	uint16_t ina219_calibrationValue = 4096;
-//	int16_t ina219_currentDivider_mA = 10; // Current LSB = 100uA per bit (1000/100 = 10)
-//	int16_t ina219_powerMultiplier_mW = 2; // Power LSB = 1mW per bit (2/1)
 
 //	INA219_setCalibration(ina219, ina219_calibrationValue);//(&hi2c1,ina219_calibrationValue)
-	// --> Write16(ina219, INA219_REG_CALIBRATION, CalibrationData);(&hi2c1,INA219_REG_CALIBRATION,ina219_calibrationValue)
 	uint8_t addr[2];
 	addr[0] = (ina219_calibrationValue >> 8) & 0xff;  // upper byte
 	addr[1] = (ina219_calibrationValue >> 0) & 0xff; // lower byte
@@ -366,8 +281,6 @@ void configIna219(uint8_t address, uint16_t TO){
 
 
 //	INA219_setConfig(ina219, config);
-//	void INA219_setConfig(INA219_t *ina219, uint16_t Config)
-//	--> Write16(ina219, INA219_REG_CONFIG, Config);
 	addr[0] = (config >> 8) & 0xff;  // upper byte
 	addr[1] = (config >> 0) & 0xff; // lower byte
 	HAL_I2C_Mem_Write(&hi2c1, (address<<1), INA219_REG_CONFIG, 1, (uint8_t*)addr, 2, TO);
@@ -376,33 +289,36 @@ void configIna219(uint8_t address, uint16_t TO){
 float getCurrent(uint8_t address, uint16_t TO){
 
 	float current;
-//	char buf [32] = {'\0'};
 	uint8_t Value[2];
-	int16_t result;
+	int16_t result = 0;
 	int16_t ina219_currentDivider_mA = 10;
-
 //	int16_t result = INA219_ReadCurrent_raw(ina219); // read en INA219_REG_CURRENT
-	ret = HAL_I2C_IsDeviceReady(&hi2c1, address, 3, 1);
-	if(ret != HAL_OK){
-		ret = HAL_I2C_Mem_Read(&hi2c1, (address<<1), INA219_REG_CURRENT, 1, Value, 2, TO);
-
-		if(ret != HAL_OK){ // Error control
-//			sprintf((char*)buf,"Shit, status: %u", (uint8_t)ret);
-//			HAL_UART_Transmit(&huart3, buf, strlen((char*)buf), 100);
-			HAL_I2C_DeInit(&hi2c1);
-			HAL_I2C_Init(&hi2c1);
-			configIna219(address,TO);
-		}
-
-		result = ((Value[0] << 8) | Value[1]); // RawCurrent
-
-		current = ((float)result / (float)ina219_currentDivider_mA);
-
-		return current;
-	}else{
-		return (float)result;
-	}
+	ret = HAL_I2C_Mem_Read(&hi2c1, (address<<1), INA219_REG_CURRENT, 1, Value, 2, TO);
+	result = ((Value[0] << 8) | Value[1]); // RawCurrent
+	current = ((float)result / (float)ina219_currentDivider_mA);
+	return current;
 }
+
+
+float readMotor(uint8_t address, uint16_t TO){
+	HAL_StatusTypeDef ret1;
+	float current;
+	ret1 = HAL_I2C_IsDeviceReady(&hi2c1, address<<1, 1, TO);
+	if(ret1 == HAL_OK){
+		configIna219(address,TO);
+		current = getCurrent(address,TO);
+	}else{
+		 // Error control
+		HAL_I2C_DeInit(&hi2c1);
+		HAL_I2C_Init(&hi2c1);
+		configIna219(address,TO);
+		current = 65535; // Estado que indica que la corriente no pudo ser leida
+	}
+	return current;
+}
+
+
+
 
 
 void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
@@ -1295,21 +1211,23 @@ void StartCorriente(void *argument)
 {
   /* USER CODE BEGIN StartCorriente */
 	/* Infinite loop */
-	float current_l = 0;
+	float current_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	uint16_t timeOut = 10;
 	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
 		for(;;)
 		{
-			current_l = getCurrent(INA219_ADDRESS_2,timeOut);
 
 
-			taskENTER_CRITICAL();
-			current = current_l;
-			taskEXIT_CRITICAL();
+			current_l[1] = readMotor(INA219_ADDRESS_0,timeOut);
+			if(current_l[1] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+				// por lo que dejo el valor anterior
+				taskENTER_CRITICAL();
+				current = current_l[1];
+				taskEXIT_CRITICAL();
+			}
 
 
-
-			osDelay(500);
+			osDelay(50);
 
 		}
   /* USER CODE END StartCorriente */
