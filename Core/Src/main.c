@@ -400,7 +400,7 @@ float getCurrent(uint8_t address, uint16_t TO){
 
 		return current;
 	}else{
-		return (float)5.5;
+		return (float)result;
 	}
 }
 
@@ -1309,7 +1309,7 @@ void StartCorriente(void *argument)
 
 
 
-			osDelay(70);
+			osDelay(500);
 
 		}
   /* USER CODE END StartCorriente */
