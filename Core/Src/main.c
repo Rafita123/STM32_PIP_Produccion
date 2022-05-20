@@ -132,15 +132,53 @@ const osSemaphoreAttr_t Semaforo1_attributes = {
 //
 //	Addresses
 //
-#define INA219_ADDRESS_0 (0x40) // Nada puenteado
-#define INA219_ADDRESS_1 (0x41) // A0 puenteado
-#define INA219_ADDRESS_2 (0x44) // A1 puenteado
-#define INA219_ADDRESS_3 (0x45) // A0 y A1 puenteados
+#define INA219_ADDRESS_1 (0x44) // A1 puenteado
+#define INA219_ADDRESS_2 (0x40) // Nada puenteado
+#define INA219_ADDRESS_3 (0x41) // A0 puenteado
+#define INA219_ADDRESS_4 (0x45) // A0 y A1 puenteados
+#define INA219_ADDRESS_5 (0x55) // Corriente placa de control
+#define INA219_ADDRESS_6 (0x56) // Corriente sobre R conocida para tension de bus
 
+#define  N_motores       (0x04)
+#define  N_corriente     (0x06)
+#define  N_Modbus        (0x20) //32
+#define  N_dato          (0x02)
+
+
+HAL_StatusTypeDef ret; // Con ret veo los estados retornados por HAL
+
+//---------------->  Modbus
+modbusHandler_t ModbusH;
+uint16_t ModbusDATA[N_Modbus];  // Mapa modbus!
+
+//---------------->
+uint32_t ranuras = 50;
+uint32_t cantTicksTmr2 = 20000;
+uint64_t fsTmr2= 50000;
+uint64_t tickFilter = 600; // Parametro delicado, puede hacer cagadas en la medicion de la velocidad, OJO
+
+//Datos referidos a la velocidad
+float velocidad[N_motores]; //Velocidad cruda
+float velocidad_prima1[N_motores]; //Velocidad filtrada
+float velocidad_prima2[N_motores];
+uint8_t flags_motores[N_motores];// Bandera para saber con que motor estamos trabajando
+
+// Datos utilizados para el calculo de la velocidad
+uint32_t ticksPrev[N_motores];
+uint32_t ticksNow[N_motores];
+uint32_t ticksAux[N_motores];
+uint32_t deltaTicks[N_motores];
+
+uint16_t overflow[N_motores]; // Cantidad de desbordes del timer
+
+//float current = 0;
+float current[N_corriente]; // Corriente de motores, bus y corriente de placa de control
 
 
 /* USER CODE END PV */
 
+
+/* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
 void SystemClock_Config(void);
 static void MX_GPIO_Init(void);
@@ -154,43 +192,10 @@ void StartCheckVelocidad(void *argument);
 void StartTaskControl(void *argument);
 void StartCorriente(void *argument);
 
-/* USER CODE BEGIN PFP */
-
 /* USER CODE END PFP */
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-HAL_StatusTypeDef ret; // Con ret veo los estados retornados por HAL
-//---------------->  Modbus
-modbusHandler_t ModbusH;
-uint16_t ModbusDATA[24]={'\0'}; // Mapa modbus!
-//---------------->
-uint32_t ranuras = 50;
-uint32_t cantTicksTmr2 = 20000;
-uint64_t fsTmr2= 50000;
-uint64_t tickFilter = 600; // Parametro delicado, puede hacer cagadas en la medicion de la velocidad, OJO
-
-float velocidad[4];
-float velocidad_prima1[4];
-float velocidad_prima2[4];
-
-uint8_t flags_motores[4];
-
-uint32_t ticksPrev[4];
-uint32_t ticksNow[4];
-uint32_t ticksAux[4];
-uint32_t deltaTicks[4];
-
-uint16_t overflow[4] = {'\0'}; // Cantidad de desbordes del timer
-
-
-float current = 0;
-
-
-
-
-
-
 
 
 void Sentido(uint8_t valor,uint8_t motor){
@@ -263,6 +268,8 @@ void Sentido(uint8_t valor,uint8_t motor){
 
 }
 
+
+
 void configIna219(uint8_t address, uint16_t TO){
 
 	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_32V |
@@ -299,7 +306,6 @@ float getCurrent(uint8_t address, uint16_t TO){
 	return current;
 }
 
-
 float readMotor(uint8_t address, uint16_t TO){
 	HAL_StatusTypeDef ret1;
 	float current;
@@ -317,8 +323,28 @@ float readMotor(uint8_t address, uint16_t TO){
 	return current;
 }
 
+float deteccionCero(uint8_t n_motor, uint8_t sentido_, uint8_t cota, float corriente, float referencia){
+	if(sentido_ == 1 && corriente > cota){
+		Sentido(0, n_motor);
+		referencia = -referencia;
+	}
 
+	if(sentido_ == 1 && corriente <= cota){
+		Sentido(1, n_motor);
+		referencia = referencia;
+	}
 
+	if(sentido_ == 0 && corriente <= -cota){
+		Sentido(1, n_motor);
+		referencia = -referencia;
+	}
+
+	if(sentido_ == 0 && corriente > -cota){
+		Sentido(0, n_motor);
+		referencia= referencia;
+	}
+	return referencia;
+}
 
 
 void HAL_GPIO_EXTI_Callback (uint16_t GPIO_Pin){
@@ -942,7 +968,7 @@ void StartModbus(void *argument)
 	//	uint16_t delta4[2];
 
 	float velocidad[4]={'\0'};
-	uint16_t ModbusDATA_l[24] = {'\0'};
+	uint16_t ModbusDATA_l[32] = {'\0'};
 	/* Infinite loop */
 	for(;;)
 	{
@@ -953,6 +979,9 @@ void StartModbus(void *argument)
 		velocidad[3] = velocidad_prima1[3];
 		taskEXIT_CRITICAL();
 
+		for(int i = 0; i < N_motores; i++){
+			if(current[i] < 0) velocidad[i] = -velocidad[i];
+		}
 
 		memcpy(delta1, &velocidad[0], sizeof(velocidad[0]));
 		ModbusDATA_l[2]=delta1[0];
@@ -972,9 +1001,32 @@ void StartModbus(void *argument)
 
 
 		//Corriente
-		memcpy(delta5, &current, sizeof(current));
+
+		memcpy(delta5, &current[0], sizeof(current[0])); // Motor 1
+		ModbusDATA_l[4]=delta5[0];
+		ModbusDATA_l[5]=delta5[1];
+
+		memcpy(delta5, &current[1], sizeof(current[1])); // Motor 2
 		ModbusDATA_l[10]=delta5[0];
 		ModbusDATA_l[11]=delta5[1];
+
+//		memcpy(delta5, &current[2], sizeof(current[2])); // Motor 3
+//		ModbusDATA_l[16]=delta5[0];
+//		ModbusDATA_l[17]=delta5[1];
+//
+//		memcpy(delta5, &current[3], sizeof(current[3])); // Motor 4
+//		ModbusDATA_l[22]=delta5[0];
+//		ModbusDATA_l[23]=delta5[1];
+
+//		memcpy(delta5, &current[4], sizeof(current[4])); // Placa Control
+//		ModbusDATA_l[24]=delta5[0];
+//		ModbusDATA_l[25]=delta5[1];
+//
+//		memcpy(delta5, &current[5], sizeof(current[5])); // Vbus
+//		ModbusDATA_l[26]=delta5[0];
+//		ModbusDATA_l[27]=delta5[1];
+
+//		ModbusDATA_l[28] // Armado del sistema
 
 
 		taskENTER_CRITICAL();
@@ -998,6 +1050,12 @@ void StartModbus(void *argument)
 		ModbusDATA[21] = ModbusDATA_l[21];
 		ModbusDATA[22] = ModbusDATA_l[22];
 		ModbusDATA[23] = ModbusDATA_l[23];
+
+		ModbusDATA[24] = ModbusDATA_l[24];
+		ModbusDATA[25] = ModbusDATA_l[25];
+		ModbusDATA[26] = ModbusDATA_l[26];
+		ModbusDATA[27] = ModbusDATA_l[27];
+
 		taskEXIT_CRITICAL();
 
 		osDelay(50);
@@ -1099,35 +1157,18 @@ void StartTaskControl(void *argument)
 		Setpoint[2] = (float)ModbusDATA[12]/1000.0;
 		Setpoint[3] = (float)ModbusDATA[18]/1000.0;
 
-		Sentido_l[0] = ModbusDATA[1];
-		Sentido_l[1] = ModbusDATA[7];
-		Sentido_l[2] = ModbusDATA[13];
-		Sentido_l[3] = ModbusDATA[19];
+		Sentido_l[0] = ModbusDATA[1]; // Motor 1
+		Sentido_l[1] = ModbusDATA[7]; // Motor 2
+		Sentido_l[2] = ModbusDATA[13]; // Motor 3
+		Sentido_l[3] = ModbusDATA[19]; // Motor 4
 		taskEXIT_CRITICAL();
 
-		if(Sentido_l[1] == 1 && current > 15){
-			Sentido(0, 2);
-			Setpoint[1] = -Setpoint[1];
-		}
 
-		if(Sentido_l[1] == 1 && current <= 15){
-			Sentido(1, 2);
-			Setpoint[1] = Setpoint[1];
-		}
 
-		if(Sentido_l[1] == 0 && current <= -15){
-			Sentido(1, 2);
-			Setpoint[1] = -Setpoint[1];
-		}
-
-		if(Sentido_l[1] == 0 && current > -15){
-			Sentido(0, 2);
-			Setpoint[1] = Setpoint[1];
-		}
-
-//		if (current <= 0){
-//			velocidad_l[1] = -velocidad_l[1];
-//		}
+		Setpoint[0] = deteccionCero(1, Sentido_l[0], 15, current[0], Setpoint[0]);
+		Setpoint[1] = deteccionCero(2, Sentido_l[1], 15, current[1], Setpoint[1]);
+//		Setpoint[2] = deteccionCero(3, Sentido_l[2], 15, current[2], Setpoint[2]);
+//		Setpoint[3] = deteccionCero(4, Sentido_l[3], 15, current[3], Setpoint[3]);
 
 
 		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
@@ -1136,10 +1177,6 @@ void StartTaskControl(void *argument)
 		rtEntrada_Control4 = Setpoint[3] - velocidad_l[3];
 		control_step(); //Ejecutamos control
 
-
-//		if (rtSalida_Control1 < 0){
-//			Sentido(1, 2);
-//		}
 
 		rtEntrada_Linealizacion1 = rtSalida_Control1;	//Salida PID asignada a entrada de planta linealizadora
 		rtEntrada_Linealizacion2 = rtSalida_Control2;
@@ -1153,48 +1190,8 @@ void StartTaskControl(void *argument)
 		htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion3;
 		htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion4;
 
-		//		if (htim1.Instance->CCR1 != ModbusDATA[0]){
-		//			htim1.Instance->CCR1 = ModbusDATA[0];
-		//		}
-		//		if (htim1.Instance->CCR2 != ModbusDATA[6]){
-		//			htim1.Instance->CCR2 = ModbusDATA[6];
-		//		}
-		//		if (htim1.Instance->CCR3 != ModbusDATA[12]){
-		//			htim1.Instance->CCR3 = ModbusDATA[12];
-		//		}
-		//		if (htim1.Instance->CCR4 != ModbusDATA[18]){
-		//			htim1.Instance->CCR4 = ModbusDATA[18];
-		//		}
-
-
-
-		//		Codigo para validar control
-		//		taskENTER_CRITICAL();
-		//		Setpoint = ModbusDATA[0]/1000.0;
-		//		taskEXIT_CRITICAL();
-		//
-		//		rtEntrada_Control = Setpoint - velocidad_l; //Error para PID
-		//		control_step(); //Ejecutamos control
-		//
-		//		htim1.Instance->CCR2 = rtSalida_Control;	//Salida PID asignada a entrada de planta linealizadora
-
-		//		Codigo para validar linealización
-		//		taskENTER_CRITICAL();
-		//		Setpoint = ModbusDATA[0]/1000.0; // Setpoint de velocidad (vueltas/seg*1000)
-		//		taskEXIT_CRITICAL();
-		//
-		//		rtEntrada_Linealizacion = Setpoint;
-		//		Linealizacion_step();
-		//		htim1.Instance->CCR2 = rtSalida_Linealizacion;
-
-		//		taskENTER_CRITICAL();
-		//		Setpoint = ModbusDATA[0]; // Setpoint de velocidad (vueltas/seg*1000)
-		//		taskEXIT_CRITICAL();
-		//
-		//		htim1.Instance->CCR2 = Setpoint;
 
 		osDelay(5);
-
 	}
 
   /* USER CODE END StartTaskControl */
@@ -1213,22 +1210,65 @@ void StartCorriente(void *argument)
 	/* Infinite loop */
 	float current_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	uint16_t timeOut = 10;
+	configIna219(INA219_ADDRESS_1,timeOut); // Config segun el address
 	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
+//	configIna219(INA219_ADDRESS_3,timeOut); // Config segun el address
+//	configIna219(INA219_ADDRESS_4,timeOut); // Config segun el address
+
 		for(;;)
 		{
-
-
-			current_l[1] = readMotor(INA219_ADDRESS_0,timeOut);
-			if(current_l[1] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			current_l[0] = readMotor(INA219_ADDRESS_1,timeOut);
+			if(current_l[0] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
 				// por lo que dejo el valor anterior
 				taskENTER_CRITICAL();
-				current = current_l[1];
+				current[0] = current_l[0];
 				taskEXIT_CRITICAL();
 			}
 
+			current_l[1] = readMotor(INA219_ADDRESS_2,timeOut);
+			if(current_l[1] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+				// por lo que dejo el valor anterior
+				taskENTER_CRITICAL();
+				current[1] = current_l[1];
+				taskEXIT_CRITICAL();
+			}
+
+//			current_l[2] = readMotor(INA219_ADDRESS_3,timeOut);
+//			if(current_l[2] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//				// por lo que dejo el valor anterior
+//				taskENTER_CRITICAL();
+//				current[2] = current_l[2];
+//				taskEXIT_CRITICAL();
+//			}
+
+//			current_l[3] = readMotor(INA219_ADDRESS_4,timeOut);
+//			if(current_l[3] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//				// por lo que dejo el valor anterior
+//				taskENTER_CRITICAL();
+//				current[3] = current_l[3];
+//				taskEXIT_CRITICAL();
+//			}
+
+//			current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
+//			if(current_l[4] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//				// por lo que dejo el valor anterior
+//				taskENTER_CRITICAL();
+//				current[4] = current_l[4];
+//				taskEXIT_CRITICAL();
+//			}
+
+			// OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
+
+//			current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
+//			if(current_l[5] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//				// por lo que dejo el valor anterior
+//				taskENTER_CRITICAL();
+//				current[5] = current_l[5];
+//				taskEXIT_CRITICAL();
+//			}
+
 
 			osDelay(50);
-
 		}
   /* USER CODE END StartCorriente */
 }
