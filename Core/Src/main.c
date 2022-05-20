@@ -55,6 +55,8 @@
 /* Private variables ---------------------------------------------------------*/
 I2C_HandleTypeDef hi2c1;
 
+IWDG_HandleTypeDef hiwdg;
+
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
 
@@ -94,6 +96,13 @@ const osThreadAttr_t Corriente_attributes = {
   .name = "Corriente",
   .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityHigh,
+};
+/* Definitions for ping */
+osThreadId_t pingHandle;
+const osThreadAttr_t ping_attributes = {
+  .name = "ping",
+  .stack_size = 64 * 4,
+  .priority = (osPriority_t) osPriorityNormal,
 };
 /* Definitions for Semaforo1 */
 osSemaphoreId_t Semaforo1Handle;
@@ -143,7 +152,13 @@ const osSemaphoreAttr_t Semaforo1_attributes = {
 #define  N_corriente     (0x06)
 #define  N_Modbus        (0x20) //32
 #define  N_dato          (0x02)
+#define  N_tasks		 (0x06)
 
+#define  SPEED_TASK 	 (0X00)
+#define  MODBUS_TASK 	 (0X01)
+#define  ZERO_SPEED_TASK (0X02)
+#define  CONTROL_TASK 	 (0X03)
+#define  CURRENT_TASK 	 (0X04)
 
 HAL_StatusTypeDef ret; // Con ret veo los estados retornados por HAL
 
@@ -162,6 +177,7 @@ float velocidad[N_motores]; //Velocidad cruda
 float velocidad_prima1[N_motores]; //Velocidad filtrada
 float velocidad_prima2[N_motores];
 uint8_t flags_motores[N_motores];// Bandera para saber con que motor estamos trabajando
+uint8_t bufferPing[N_tasks-1];
 
 // Datos utilizados para el calculo de la velocidad
 uint32_t ticksPrev[N_motores];
@@ -177,6 +193,20 @@ float current[N_corriente]; // Corriente de motores, bus y corriente de placa de
 
 /* USER CODE END PV */
 
+/* Private function prototypes -----------------------------------------------*/
+void SystemClock_Config(void);
+static void MX_GPIO_Init(void);
+static void MX_TIM1_Init(void);
+static void MX_TIM2_Init(void);
+static void MX_USART3_UART_Init(void);
+static void MX_I2C1_Init(void);
+static void MX_IWDG_Init(void);
+void StartSpeed1(void *argument);
+void StartModbus(void *argument);
+void StartCheckVelocidad(void *argument);
+void StartTaskControl(void *argument);
+void StartCorriente(void *argument);
+void startPing(void *argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -273,13 +303,13 @@ void Sentido(uint8_t valor,uint8_t motor){
 void configIna219(uint8_t address, uint16_t TO){
 
 	uint16_t config = INA219_CONFIG_BVOLTAGERANGE_32V |
-		             INA219_CONFIG_GAIN_8_320MV | INA219_CONFIG_BADCRES_12BIT |
-					 INA219_CONFIG_SADCRES_12BIT_128S_69MS |
-					 INA219_CONFIG_MODE_SVOLT_CONTINUOUS;
+			INA219_CONFIG_GAIN_8_320MV | INA219_CONFIG_BADCRES_12BIT |
+			INA219_CONFIG_SADCRES_12BIT_128S_69MS |
+			INA219_CONFIG_MODE_SVOLT_CONTINUOUS;
 
 	uint16_t ina219_calibrationValue = 4096;
 
-//	INA219_setCalibration(ina219, ina219_calibrationValue);//(&hi2c1,ina219_calibrationValue)
+	//	INA219_setCalibration(ina219, ina219_calibrationValue);//(&hi2c1,ina219_calibrationValue)
 	uint8_t addr[2];
 	addr[0] = (ina219_calibrationValue >> 8) & 0xff;  // upper byte
 	addr[1] = (ina219_calibrationValue >> 0) & 0xff; // lower byte
@@ -287,7 +317,7 @@ void configIna219(uint8_t address, uint16_t TO){
 
 
 
-//	INA219_setConfig(ina219, config);
+	//	INA219_setConfig(ina219, config);
 	addr[0] = (config >> 8) & 0xff;  // upper byte
 	addr[1] = (config >> 0) & 0xff; // lower byte
 	HAL_I2C_Mem_Write(&hi2c1, (address<<1), INA219_REG_CONFIG, 1, (uint8_t*)addr, 2, TO);
@@ -299,7 +329,7 @@ float getCurrent(uint8_t address, uint16_t TO){
 	uint8_t Value[2];
 	int16_t result = 0;
 	int16_t ina219_currentDivider_mA = 10;
-//	int16_t result = INA219_ReadCurrent_raw(ina219); // read en INA219_REG_CURRENT
+	//	int16_t result = INA219_ReadCurrent_raw(ina219); // read en INA219_REG_CURRENT
 	ret = HAL_I2C_Mem_Read(&hi2c1, (address<<1), INA219_REG_CURRENT, 1, Value, 2, TO);
 	result = ((Value[0] << 8) | Value[1]); // RawCurrent
 	current = ((float)result / (float)ina219_currentDivider_mA);
@@ -314,7 +344,7 @@ float readMotor(uint8_t address, uint16_t TO){
 		configIna219(address,TO);
 		current = getCurrent(address,TO);
 	}else{
-		 // Error control
+		// Error control
 		HAL_I2C_DeInit(&hi2c1);
 		HAL_I2C_Init(&hi2c1);
 		configIna219(address,TO);
@@ -416,6 +446,7 @@ int main(void)
   MX_TIM2_Init();
   MX_USART3_UART_Init();
   MX_I2C1_Init();
+  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
 	Linealizacion_initialize();
@@ -488,6 +519,9 @@ int main(void)
   /* creation of Corriente */
   CorrienteHandle = osThreadNew(StartCorriente, NULL, &Corriente_attributes);
 
+  /* creation of ping */
+  pingHandle = osThreadNew(startPing, NULL, &ping_attributes);
+
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -525,10 +559,11 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
+  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
@@ -582,6 +617,34 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
+
+}
+
+/**
+  * @brief IWDG Initialization Function
+  * @param None
+  * @retval None
+  */
+static void MX_IWDG_Init(void)
+{
+
+  /* USER CODE BEGIN IWDG_Init 0 */
+
+  /* USER CODE END IWDG_Init 0 */
+
+  /* USER CODE BEGIN IWDG_Init 1 */
+
+  /* USER CODE END IWDG_Init 1 */
+  hiwdg.Instance = IWDG;
+  hiwdg.Init.Prescaler = IWDG_PRESCALER_32;
+  hiwdg.Init.Reload = 4095;
+  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  /* USER CODE BEGIN IWDG_Init 2 */
+
+  /* USER CODE END IWDG_Init 2 */
 
 }
 
@@ -972,6 +1035,8 @@ void StartModbus(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
+		bufferPing[MODBUS_TASK] = 1; //pin para watchdog
+
 		taskENTER_CRITICAL();
 		velocidad[0] = velocidad_prima1[0];
 		velocidad[1] = velocidad_prima1[1];
@@ -1010,23 +1075,23 @@ void StartModbus(void *argument)
 		ModbusDATA_l[10]=delta5[0];
 		ModbusDATA_l[11]=delta5[1];
 
-//		memcpy(delta5, &current[2], sizeof(current[2])); // Motor 3
-//		ModbusDATA_l[16]=delta5[0];
-//		ModbusDATA_l[17]=delta5[1];
-//
-//		memcpy(delta5, &current[3], sizeof(current[3])); // Motor 4
-//		ModbusDATA_l[22]=delta5[0];
-//		ModbusDATA_l[23]=delta5[1];
+		//		memcpy(delta5, &current[2], sizeof(current[2])); // Motor 3
+		//		ModbusDATA_l[16]=delta5[0];
+		//		ModbusDATA_l[17]=delta5[1];
+		//
+		//		memcpy(delta5, &current[3], sizeof(current[3])); // Motor 4
+		//		ModbusDATA_l[22]=delta5[0];
+		//		ModbusDATA_l[23]=delta5[1];
 
-//		memcpy(delta5, &current[4], sizeof(current[4])); // Placa Control
-//		ModbusDATA_l[24]=delta5[0];
-//		ModbusDATA_l[25]=delta5[1];
-//
-//		memcpy(delta5, &current[5], sizeof(current[5])); // Vbus
-//		ModbusDATA_l[26]=delta5[0];
-//		ModbusDATA_l[27]=delta5[1];
+		//		memcpy(delta5, &current[4], sizeof(current[4])); // Placa Control
+		//		ModbusDATA_l[24]=delta5[0];
+		//		ModbusDATA_l[25]=delta5[1];
+		//
+		//		memcpy(delta5, &current[5], sizeof(current[5])); // Vbus
+		//		ModbusDATA_l[26]=delta5[0];
+		//		ModbusDATA_l[27]=delta5[1];
 
-//		ModbusDATA_l[28] // Armado del sistema
+		//		ModbusDATA_l[28] // Armado del sistema
 
 
 		taskENTER_CRITICAL();
@@ -1079,6 +1144,7 @@ void StartCheckVelocidad(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
+		bufferPing[ZERO_SPEED_TASK] = 1; //pin para watchdog
 		taskENTER_CRITICAL();
 		overflow_l[0] = overflow[0];
 		overflow_l[1] = overflow[1];
@@ -1148,6 +1214,7 @@ void StartTaskControl(void *argument)
 	/* Infinite loop */
 	for(;;)
 	{
+		bufferPing[CONTROL_TASK] = 1; //pin para watchdog
 		taskENTER_CRITICAL();
 		velocidad_l[0] = velocidad[0];
 		velocidad_l[1] = velocidad[1];
@@ -1175,8 +1242,8 @@ void StartTaskControl(void *argument)
 
 		Setpoint[0] = deteccionCero(1, Sentido_l[0], 15, current[0], Setpoint[0]);
 		Setpoint[1] = deteccionCero(2, Sentido_l[1], 15, current[1], Setpoint[1]);
-//		Setpoint[2] = deteccionCero(3, Sentido_l[2], 15, current[2], Setpoint[2]);
-//		Setpoint[3] = deteccionCero(4, Sentido_l[3], 15, current[3], Setpoint[3]);
+		//		Setpoint[2] = deteccionCero(3, Sentido_l[2], 15, current[2], Setpoint[2]);
+		//		Setpoint[3] = deteccionCero(4, Sentido_l[3], 15, current[3], Setpoint[3]);
 
 
 		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
@@ -1220,65 +1287,98 @@ void StartCorriente(void *argument)
 	uint16_t timeOut = 10;
 	configIna219(INA219_ADDRESS_1,timeOut); // Config segun el address
 	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
-//	configIna219(INA219_ADDRESS_3,timeOut); // Config segun el address
-//	configIna219(INA219_ADDRESS_4,timeOut); // Config segun el address
+	//	configIna219(INA219_ADDRESS_3,timeOut); // Config segun el address
+	//	configIna219(INA219_ADDRESS_4,timeOut); // Config segun el address
 
-		for(;;)
-		{
-			current_l[0] = readMotor(INA219_ADDRESS_1,timeOut);
-			if(current_l[0] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-				// por lo que dejo el valor anterior
-				taskENTER_CRITICAL();
-				current[0] = current_l[0];
-				taskEXIT_CRITICAL();
-			}
-
-			current_l[1] = readMotor(INA219_ADDRESS_2,timeOut);
-			if(current_l[1] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-				// por lo que dejo el valor anterior
-				taskENTER_CRITICAL();
-				current[1] = current_l[1];
-				taskEXIT_CRITICAL();
-			}
-
-//			current_l[2] = readMotor(INA219_ADDRESS_3,timeOut);
-//			if(current_l[2] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//				// por lo que dejo el valor anterior
-//				taskENTER_CRITICAL();
-//				current[2] = current_l[2];
-//				taskEXIT_CRITICAL();
-//			}
-
-//			current_l[3] = readMotor(INA219_ADDRESS_4,timeOut);
-//			if(current_l[3] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//				// por lo que dejo el valor anterior
-//				taskENTER_CRITICAL();
-//				current[3] = current_l[3];
-//				taskEXIT_CRITICAL();
-//			}
-
-//			current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
-//			if(current_l[4] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//				// por lo que dejo el valor anterior
-//				taskENTER_CRITICAL();
-//				current[4] = current_l[4];
-//				taskEXIT_CRITICAL();
-//			}
-
-			// OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
-
-//			current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
-//			if(current_l[5] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//				// por lo que dejo el valor anterior
-//				taskENTER_CRITICAL();
-//				current[5] = current_l[5];
-//				taskEXIT_CRITICAL();
-//			}
-
-
-			osDelay(50);
+	for(;;)
+	{
+		bufferPing[CURRENT_TASK] = 1; //pin para watchdog
+		current_l[0] = readMotor(INA219_ADDRESS_1,timeOut);
+		if(current_l[0] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			taskENTER_CRITICAL();
+			current[0] = current_l[0];
+			taskEXIT_CRITICAL();
 		}
+
+		current_l[1] = readMotor(INA219_ADDRESS_2,timeOut);
+		if(current_l[1] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			taskENTER_CRITICAL();
+			current[1] = current_l[1];
+			taskEXIT_CRITICAL();
+		}
+
+		//			current_l[2] = readMotor(INA219_ADDRESS_3,timeOut);
+		//			if(current_l[2] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+		//				// por lo que dejo el valor anterior
+		//				taskENTER_CRITICAL();
+		//				current[2] = current_l[2];
+		//				taskEXIT_CRITICAL();
+		//			}
+
+		//			current_l[3] = readMotor(INA219_ADDRESS_4,timeOut);
+		//			if(current_l[3] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+		//				// por lo que dejo el valor anterior
+		//				taskENTER_CRITICAL();
+		//				current[3] = current_l[3];
+		//				taskEXIT_CRITICAL();
+		//			}
+
+		//			current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
+		//			if(current_l[4] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+		//				// por lo que dejo el valor anterior
+		//				taskENTER_CRITICAL();
+		//				current[4] = current_l[4];
+		//				taskEXIT_CRITICAL();
+		//			}
+
+		// OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
+
+		//			current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
+		//			if(current_l[5] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+		//				// por lo que dejo el valor anterior
+		//				taskENTER_CRITICAL();
+		//				current[5] = current_l[5];
+		//				taskEXIT_CRITICAL();
+		//			}
+
+
+		osDelay(50);
+	}
   /* USER CODE END StartCorriente */
+}
+
+/* USER CODE BEGIN Header_startPing */
+/**
+ * @brief Function implementing the ping thread.
+ * @param argument: Not used
+ * @retval None
+ */
+/* USER CODE END Header_startPing */
+void startPing(void *argument)
+{
+  /* USER CODE BEGIN startPing */
+	/* Infinite loop */
+	uint8_t var = 0;
+	for(;;)
+	{
+//		for(int i=0;i<N_tasks-1;i++){
+//			if(bufferPing[i] != 1 && i!=SPEED_TASK && i!=CONTROL_TASK && i!=CURRENT_TASK && i!=ZERO_SPEED_TASK && i!=MODBUS_TASK){
+//				var = 1;
+//
+//			}
+//			bufferPing[i]=0;
+//		}
+//		if (var== 0){
+//			HAL_IWDG_Refresh(&hiwdg);
+			__HAL_IWDG_RELOAD_COUNTER(&hiwdg);
+//		}
+//		var = 0;
+
+		osDelay(50);
+	}
+  /* USER CODE END startPing */
 }
 
 /**
@@ -1297,14 +1397,14 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
     HAL_IncTick();
   }
   /* USER CODE BEGIN Callback 1 */
-		if(htim->Instance == TIM2){
-			overflow[0] += 1;
-			overflow[1] += 1;
-			overflow[2] += 1;
-			overflow[3] += 1;
+	if(htim->Instance == TIM2){
+		overflow[0] += 1;
+		overflow[1] += 1;
+		overflow[2] += 1;
+		overflow[3] += 1;
 
 
-		}
+	}
   /* USER CODE END Callback 1 */
 }
 
@@ -1315,11 +1415,11 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 void Error_Handler(void)
 {
   /* USER CODE BEGIN Error_Handler_Debug */
-		/* User can add his own implementation to report the HAL error return state */
-		__disable_irq();
-		while (1)
-		{
-		}
+	/* User can add his own implementation to report the HAL error return state */
+	__disable_irq();
+	while (1)
+	{
+	}
   /* USER CODE END Error_Handler_Debug */
 }
 
@@ -1334,7 +1434,7 @@ void Error_Handler(void)
 void assert_failed(uint8_t *file, uint32_t line)
 {
   /* USER CODE BEGIN 6 */
-		/* User can add his own implementation to report the file name and line number,
+	/* User can add his own implementation to report the file name and line number,
      ex: printf("Wrong parameters value: file %s on line %d\r\n", file, line) */
   /* USER CODE END 6 */
 }
