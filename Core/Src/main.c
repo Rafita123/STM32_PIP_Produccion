@@ -911,7 +911,7 @@ void StartSpeed1(void *argument)
 			}
 		} else{
 			// Tuve algun desborde y tengo que tenerlo en cuenta
-			deltaTicks_l = (ticksNow_l + overflow_l * cantTicksTmr2)- ticksPrev_l;/////////////////////////////////////////
+			deltaTicks_l = (ticksNow_l + overflow_l * cantTicksTmr2)- ticksPrev_l;
 			if (deltaTicks_l > tickFilter){
 				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
 				//Filtro IIR
@@ -968,7 +968,7 @@ void StartModbus(void *argument)
 	//	uint16_t delta4[2];
 
 	float velocidad[4]={'\0'};
-	uint16_t ModbusDATA_l[32] = {'\0'};
+	uint16_t ModbusDATA_l[N_Modbus] = {'\0'};
 	/* Infinite loop */
 	for(;;)
 	{
@@ -1140,6 +1140,8 @@ void StartTaskControl(void *argument)
 	float velocidad_l[4]={'\0'};
 	float Setpoint[4] = {'\0'};
 	uint16_t Sentido_l[4]={'\0'};
+	uint8_t parada=0;
+
 
 	//	float error=0;
 
@@ -1161,8 +1163,14 @@ void StartTaskControl(void *argument)
 		Sentido_l[1] = ModbusDATA[7]; // Motor 2
 		Sentido_l[2] = ModbusDATA[13]; // Motor 3
 		Sentido_l[3] = ModbusDATA[19]; // Motor 4
+		parada = ModbusDATA[28];
 		taskEXIT_CRITICAL();
 
+		if(parada == 0){
+			for(int i=0;i<N_motores;i++){
+				Setpoint[i]=0;
+			}
+		}
 
 
 		Setpoint[0] = deteccionCero(1, Sentido_l[0], 15, current[0], Setpoint[0]);

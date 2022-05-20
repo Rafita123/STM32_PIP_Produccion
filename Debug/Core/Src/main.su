@@ -18,7 +18,7 @@ main.c:758:13:MX_GPIO_Init	40	static
 main.c:833:6:StartSpeed1	64	static
 main.c:959:6:StartModbus	120	static
 main.c:1073:6:StartCheckVelocidad	24	static
-main.c:1137:6:StartTaskControl	64	static
-main.c:1207:6:StartCorriente	48	static
-main.c:1284:6:HAL_TIM_PeriodElapsedCallback	16	static
-main.c:1307:6:Error_Handler	4	static,ignoring_inline_asm
+main.c:1137:6:StartTaskControl	72	static
+main.c:1215:6:StartCorriente	48	static
+main.c:1292:6:HAL_TIM_PeriodElapsedCallback	16	static
+main.c:1315:6:Error_Handler	4	static,ignoring_inline_asm
