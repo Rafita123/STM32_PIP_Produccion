@@ -53,9 +53,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
-I2C_HandleTypeDef hi2c1;
-
-IWDG_HandleTypeDef hiwdg;
+ I2C_HandleTypeDef hi2c1;
 
 TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim2;
@@ -97,13 +95,6 @@ const osThreadAttr_t Corriente_attributes = {
   .stack_size = 1024 * 4,
   .priority = (osPriority_t) osPriorityHigh,
 };
-/* Definitions for ping */
-osThreadId_t pingHandle;
-const osThreadAttr_t ping_attributes = {
-  .name = "ping",
-  .stack_size = 64 * 4,
-  .priority = (osPriority_t) osPriorityNormal,
-};
 /* Definitions for Semaforo1 */
 osSemaphoreId_t Semaforo1Handle;
 const osSemaphoreAttr_t Semaforo1_attributes = {
@@ -141,12 +132,12 @@ const osSemaphoreAttr_t Semaforo1_attributes = {
 //
 //	Addresses
 //
-#define INA219_ADDRESS_1 (0x44) // A1 puenteado
-#define INA219_ADDRESS_2 (0x40) // Nada puenteado
+#define INA219_ADDRESS_1 (0x40) // Nada puenteado
+#define INA219_ADDRESS_2 (0x44) // A1 puenteado
 #define INA219_ADDRESS_3 (0x41) // A0 puenteado
 #define INA219_ADDRESS_4 (0x45) // A0 y A1 puenteados
-#define INA219_ADDRESS_5 (0x55) // Corriente placa de control
-#define INA219_ADDRESS_6 (0x56) // Corriente sobre R conocida para tension de bus
+#define INA219_ADDRESS_5 (0x42) // Corriente placa de control
+#define INA219_ADDRESS_6 (0x4C) // Corriente sobre R conocida para tension de bus
 
 #define  N_motores       (0x04)
 #define  N_corriente     (0x06)
@@ -200,13 +191,11 @@ static void MX_TIM1_Init(void);
 static void MX_TIM2_Init(void);
 static void MX_USART3_UART_Init(void);
 static void MX_I2C1_Init(void);
-static void MX_IWDG_Init(void);
 void StartSpeed1(void *argument);
 void StartModbus(void *argument);
 void StartCheckVelocidad(void *argument);
 void StartTaskControl(void *argument);
 void StartCorriente(void *argument);
-void startPing(void *argument);
 
 /* USER CODE BEGIN PFP */
 /* Private function prototypes -----------------------------------------------*/
@@ -287,7 +276,7 @@ void Sentido(uint8_t valor,uint8_t motor){
 		//Motor gira en otro sentido
 		else if(valor == 1){
 			HAL_GPIO_WritePin(IN4_1_GPIO_Port, IN4_1_Pin, RESET);
-			HAL_GPIO_WritePin(IN3_2_GPIO_Port, IN4_2_Pin, SET);
+			HAL_GPIO_WritePin(IN4_2_GPIO_Port, IN4_2_Pin, SET);
 
 		}
 		else{ // Break
@@ -446,7 +435,6 @@ int main(void)
   MX_TIM2_Init();
   MX_USART3_UART_Init();
   MX_I2C1_Init();
-  MX_IWDG_Init();
   /* USER CODE BEGIN 2 */
 	HAL_TIM_Base_Start_IT(&htim2);
 	Linealizacion_initialize();
@@ -519,9 +507,6 @@ int main(void)
   /* creation of Corriente */
   CorrienteHandle = osThreadNew(StartCorriente, NULL, &Corriente_attributes);
 
-  /* creation of ping */
-  pingHandle = osThreadNew(startPing, NULL, &ping_attributes);
-
   /* USER CODE BEGIN RTOS_THREADS */
 	/* add threads, ... */
   /* USER CODE END RTOS_THREADS */
@@ -559,11 +544,10 @@ void SystemClock_Config(void)
   /** Initializes the RCC Oscillators according to the specified parameters
   * in the RCC_OscInitTypeDef structure.
   */
-  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_LSI|RCC_OSCILLATORTYPE_HSE;
+  RCC_OscInitStruct.OscillatorType = RCC_OSCILLATORTYPE_HSE;
   RCC_OscInitStruct.HSEState = RCC_HSE_ON;
   RCC_OscInitStruct.HSEPredivValue = RCC_HSE_PREDIV_DIV1;
   RCC_OscInitStruct.HSIState = RCC_HSI_ON;
-  RCC_OscInitStruct.LSIState = RCC_LSI_ON;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSE;
   RCC_OscInitStruct.PLL.PLLMUL = RCC_PLL_MUL9;
@@ -571,6 +555,7 @@ void SystemClock_Config(void)
   {
     Error_Handler();
   }
+
   /** Initializes the CPU, AHB and APB buses clocks
   */
   RCC_ClkInitStruct.ClockType = RCC_CLOCKTYPE_HCLK|RCC_CLOCKTYPE_SYSCLK
@@ -617,34 +602,6 @@ static void MX_I2C1_Init(void)
   /* USER CODE BEGIN I2C1_Init 2 */
 
   /* USER CODE END I2C1_Init 2 */
-
-}
-
-/**
-  * @brief IWDG Initialization Function
-  * @param None
-  * @retval None
-  */
-static void MX_IWDG_Init(void)
-{
-
-  /* USER CODE BEGIN IWDG_Init 0 */
-
-  /* USER CODE END IWDG_Init 0 */
-
-  /* USER CODE BEGIN IWDG_Init 1 */
-
-  /* USER CODE END IWDG_Init 1 */
-  hiwdg.Instance = IWDG;
-  hiwdg.Init.Prescaler = IWDG_PRESCALER_32;
-  hiwdg.Init.Reload = 4095;
-  if (HAL_IWDG_Init(&hiwdg) != HAL_OK)
-  {
-    Error_Handler();
-  }
-  /* USER CODE BEGIN IWDG_Init 2 */
-
-  /* USER CODE END IWDG_Init 2 */
 
 }
 
@@ -829,7 +786,7 @@ static void MX_GPIO_Init(void)
   __HAL_RCC_GPIOB_CLK_ENABLE();
 
   /*Configure GPIO pin Output Level */
-  HAL_GPIO_WritePin(Led_GPIO_Port, Led_Pin, GPIO_PIN_RESET);
+  HAL_GPIO_WritePin(LED_GPIO_Port, LED_Pin, GPIO_PIN_RESET);
 
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOB, IN2_1_Pin|IN2_2_Pin|IN1_2_Pin|IN1_1_Pin
@@ -838,12 +795,12 @@ static void MX_GPIO_Init(void)
   /*Configure GPIO pin Output Level */
   HAL_GPIO_WritePin(GPIOA, IN4_1_Pin|IN4_2_Pin, GPIO_PIN_RESET);
 
-  /*Configure GPIO pin : Led_Pin */
-  GPIO_InitStruct.Pin = Led_Pin;
+  /*Configure GPIO pin : LED_Pin */
+  GPIO_InitStruct.Pin = LED_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(Led_GPIO_Port, &GPIO_InitStruct);
+  HAL_GPIO_Init(LED_GPIO_Port, &GPIO_InitStruct);
 
   /*Configure GPIO pins : D01_Encoder_Pin D02_Encoder_Pin D03_Encoder_Pin D04_Encoder_Pin */
   GPIO_InitStruct.Pin = D01_Encoder_Pin|D02_Encoder_Pin|D03_Encoder_Pin|D04_Encoder_Pin;
@@ -997,12 +954,6 @@ void StartSpeed1(void *argument)
 			}
 		}
 
-		if (valor == 2 && current > 0 ){
-			taskENTER_CRITICAL();
-			velocidad[valor] = -velocidad[valor];
-			taskEXIT_CRITICAL();
-		}
-
 		taskENTER_CRITICAL();
 		flags_motores_l[valor] = 0;
 		flags_motores[valor] = 0;
@@ -1075,21 +1026,21 @@ void StartModbus(void *argument)
 		ModbusDATA_l[10]=delta5[0];
 		ModbusDATA_l[11]=delta5[1];
 
-		//		memcpy(delta5, &current[2], sizeof(current[2])); // Motor 3
-		//		ModbusDATA_l[16]=delta5[0];
-		//		ModbusDATA_l[17]=delta5[1];
-		//
-		//		memcpy(delta5, &current[3], sizeof(current[3])); // Motor 4
-		//		ModbusDATA_l[22]=delta5[0];
-		//		ModbusDATA_l[23]=delta5[1];
+		memcpy(delta5, &current[2], sizeof(current[2])); // Motor 3
+		ModbusDATA_l[16]=delta5[0];
+		ModbusDATA_l[17]=delta5[1];
 
-		//		memcpy(delta5, &current[4], sizeof(current[4])); // Placa Control
-		//		ModbusDATA_l[24]=delta5[0];
-		//		ModbusDATA_l[25]=delta5[1];
-		//
-		//		memcpy(delta5, &current[5], sizeof(current[5])); // Vbus
-		//		ModbusDATA_l[26]=delta5[0];
-		//		ModbusDATA_l[27]=delta5[1];
+		memcpy(delta5, &current[3], sizeof(current[3])); // Motor 4
+		ModbusDATA_l[22]=delta5[0];
+		ModbusDATA_l[23]=delta5[1];
+
+		memcpy(delta5, &current[4], sizeof(current[4])); // Placa Control
+		ModbusDATA_l[24]=delta5[0];
+		ModbusDATA_l[25]=delta5[1];
+
+		memcpy(delta5, &current[5], sizeof(current[5])); // Vbus
+		ModbusDATA_l[26]=delta5[0];
+		ModbusDATA_l[27]=delta5[1];
 
 		//		ModbusDATA_l[28] // Armado del sistema
 
@@ -1216,20 +1167,22 @@ void StartTaskControl(void *argument)
 	{
 		bufferPing[CONTROL_TASK] = 1; //pin para watchdog
 		taskENTER_CRITICAL();
-		velocidad_l[0] = velocidad[0];
-		velocidad_l[1] = velocidad[1];
-		velocidad_l[2] = velocidad[2];
-		velocidad_l[3] = velocidad[3];
+		velocidad_l[0] = velocidad[0]; //MOTOR1
+		velocidad_l[1] = velocidad[1]; //MOTOR2
+		velocidad_l[2] = velocidad[2]; //MOTOR3
+		velocidad_l[3] = velocidad[3]; //MOTOR4
 
-		Setpoint[0] = (float)ModbusDATA[0]/1000.0;
-		Setpoint[1] = (float)ModbusDATA[6]/1000.0;
-		Setpoint[2] = (float)ModbusDATA[12]/1000.0;
-		Setpoint[3] = (float)ModbusDATA[18]/1000.0;
+		Setpoint[0] = (float)ModbusDATA[0]/1000.0; //SETPOINT MOTOR1
+		Setpoint[1] = (float)ModbusDATA[6]/1000.0; //SETPOINT MOTOR2
+		Setpoint[2] = (float)ModbusDATA[12]/1000.0; //SETPOINT MOTOR3
+		Setpoint[3] = (float)ModbusDATA[18]/1000.0; //SETPOINT MOTOR4
 
-		Sentido_l[0] = ModbusDATA[1]; // Motor 1
-		Sentido_l[1] = ModbusDATA[7]; // Motor 2
-		Sentido_l[2] = ModbusDATA[13]; // Motor 3
-		Sentido_l[3] = ModbusDATA[19]; // Motor 4
+		Sentido_l[0] = ModbusDATA[1]; //SENTIDO MOTOR 1
+		Sentido_l[1] = ModbusDATA[7]; //SENTIDO MOTOR 2
+		Sentido_l[2] = ModbusDATA[13]; //SENTIDO MOTOR 3
+		Sentido_l[3] = ModbusDATA[19]; //SENTIDO MOTOR 4
+
+		/////////////// FUNCION PARA PARADA GENERAL /////////////////////////////////
 		parada = ModbusDATA[28];
 		taskEXIT_CRITICAL();
 
@@ -1239,11 +1192,12 @@ void StartTaskControl(void *argument)
 			}
 		}
 
+		/////////////////////////////////////////////////////////////////////////////
 
-		Setpoint[0] = deteccionCero(1, Sentido_l[0], 15, current[0], Setpoint[0]);
-		Setpoint[1] = deteccionCero(2, Sentido_l[1], 15, current[1], Setpoint[1]);
-		//		Setpoint[2] = deteccionCero(3, Sentido_l[2], 15, current[2], Setpoint[2]);
-		//		Setpoint[3] = deteccionCero(4, Sentido_l[3], 15, current[3], Setpoint[3]);
+		Setpoint[0] = deteccionCero(1, Sentido_l[0], 5, current[0], Setpoint[0]);
+		Setpoint[1] = deteccionCero(2, Sentido_l[1], 5, current[1], Setpoint[1]);
+		Setpoint[2] = deteccionCero(3, Sentido_l[2], 5, current[2], Setpoint[2]);
+		Setpoint[3] = deteccionCero(4, Sentido_l[3], 5, current[3], Setpoint[3]);
 
 
 		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
@@ -1262,8 +1216,8 @@ void StartTaskControl(void *argument)
 
 		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion1;	//Salida linealizada asignada a CCR
 		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion2;
-		htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion3;
-		htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion4;
+		htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion3;
+		htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion4;
 
 
 		osDelay(5);
@@ -1293,7 +1247,7 @@ void StartCorriente(void *argument)
 	for(;;)
 	{
 		bufferPing[CURRENT_TASK] = 1; //pin para watchdog
-		current_l[0] = readMotor(INA219_ADDRESS_1,timeOut);
+		current_l[0] = readMotor(INA219_ADDRESS_3,timeOut);
 		if(current_l[0] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
 			// por lo que dejo el valor anterior
 			taskENTER_CRITICAL();
@@ -1301,7 +1255,7 @@ void StartCorriente(void *argument)
 			taskEXIT_CRITICAL();
 		}
 
-		current_l[1] = readMotor(INA219_ADDRESS_2,timeOut);
+		current_l[1] = readMotor(INA219_ADDRESS_4,timeOut);
 		if(current_l[1] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
 			// por lo que dejo el valor anterior
 			taskENTER_CRITICAL();
@@ -1309,76 +1263,44 @@ void StartCorriente(void *argument)
 			taskEXIT_CRITICAL();
 		}
 
-		//			current_l[2] = readMotor(INA219_ADDRESS_3,timeOut);
-		//			if(current_l[2] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-		//				// por lo que dejo el valor anterior
-		//				taskENTER_CRITICAL();
-		//				current[2] = current_l[2];
-		//				taskEXIT_CRITICAL();
-		//			}
+		current_l[2] = readMotor(INA219_ADDRESS_2,timeOut);
+		if(current_l[2] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			taskENTER_CRITICAL();
+			current[2] = current_l[2];
+			taskEXIT_CRITICAL();
+		}
 
-		//			current_l[3] = readMotor(INA219_ADDRESS_4,timeOut);
-		//			if(current_l[3] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-		//				// por lo que dejo el valor anterior
-		//				taskENTER_CRITICAL();
-		//				current[3] = current_l[3];
-		//				taskEXIT_CRITICAL();
-		//			}
+		current_l[3] = readMotor(INA219_ADDRESS_1,timeOut);
+		if(current_l[3] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			taskENTER_CRITICAL();
+			current[3] = current_l[3];
+			taskEXIT_CRITICAL();
+		}
 
-		//			current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
-		//			if(current_l[4] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-		//				// por lo que dejo el valor anterior
-		//				taskENTER_CRITICAL();
-		//				current[4] = current_l[4];
-		//				taskEXIT_CRITICAL();
-		//			}
+		current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
+		if(current_l[4] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			taskENTER_CRITICAL();
+			current[4] = current_l[4];
+			taskEXIT_CRITICAL();
+		}
 
-		// OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
+//		OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
 
-		//			current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
-		//			if(current_l[5] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-		//				// por lo que dejo el valor anterior
-		//				taskENTER_CRITICAL();
-		//				current[5] = current_l[5];
-		//				taskEXIT_CRITICAL();
-		//			}
+		current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
+		if(current_l[5] != 65535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			taskENTER_CRITICAL();
+			current[5] = current_l[5]*3.3;
+			taskEXIT_CRITICAL();
+		}
 
 
 		osDelay(50);
 	}
   /* USER CODE END StartCorriente */
-}
-
-/* USER CODE BEGIN Header_startPing */
-/**
- * @brief Function implementing the ping thread.
- * @param argument: Not used
- * @retval None
- */
-/* USER CODE END Header_startPing */
-void startPing(void *argument)
-{
-  /* USER CODE BEGIN startPing */
-	/* Infinite loop */
-	uint8_t var = 0;
-	for(;;)
-	{
-//		for(int i=0;i<N_tasks-1;i++){
-//			if(bufferPing[i] != 1 && i!=SPEED_TASK && i!=CONTROL_TASK && i!=CURRENT_TASK && i!=ZERO_SPEED_TASK && i!=MODBUS_TASK){
-//				var = 1;
-//
-//			}
-//			bufferPing[i]=0;
-//		}
-//		if (var== 0){
-//			HAL_IWDG_Refresh(&hiwdg);
-			__HAL_IWDG_RELOAD_COUNTER(&hiwdg);
-//		}
-//		var = 0;
-
-		osDelay(50);
-	}
-  /* USER CODE END startPing */
 }
 
 /**
@@ -1402,7 +1324,7 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		overflow[1] += 1;
 		overflow[2] += 1;
 		overflow[3] += 1;
-
+		HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
 
 	}
   /* USER CODE END Callback 1 */
@@ -1439,4 +1361,3 @@ void assert_failed(uint8_t *file, uint32_t line)
   /* USER CODE END 6 */
 }
 #endif /* USE_FULL_ASSERT */
-

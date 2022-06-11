@@ -1,6 +1,6 @@
 ################################################################################
 # Automatically-generated file. Do not edit!
-# Toolchain: GNU Tools for STM32 (9-2020-q2-update)
+# Toolchain: GNU Tools for STM32 (10.3-2021.10)
 ################################################################################
 
 -include ../makefile.init
@@ -47,14 +47,14 @@ BUILD_ARTIFACT := $(BUILD_ARTIFACT_PREFIX)$(BUILD_ARTIFACT_NAME)$(if $(BUILD_ART
 EXECUTABLES += \
 STM32_PIP_Produccion.elf \
 
+MAP_FILES += \
+STM32_PIP_Produccion.map \
+
 SIZE_OUTPUT += \
 default.size.stdout \
 
 OBJDUMP_LIST += \
 STM32_PIP_Produccion.list \
-
-OBJCOPY_BIN += \
-STM32_PIP_Produccion.bin \
 
 
 # All Target
@@ -64,7 +64,7 @@ all: main-build
 main-build: STM32_PIP_Produccion.elf secondary-outputs
 
 # Tool invocations
-STM32_PIP_Produccion.elf: $(OBJS) $(USER_OBJS) D:\Facu\Facultad\Tesis\codes\Main\ code\STM32_PIP_Produccion\STM32F103CBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+STM32_PIP_Produccion.elf STM32_PIP_Produccion.map: $(OBJS) $(USER_OBJS) D:\Facu\Facultad\Tesis\codes\Main\ code\STM32_PIP_Produccion\STM32F103CBTX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
 	arm-none-eabi-gcc -o "STM32_PIP_Produccion.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m3 -T"D:\Facu\Facultad\Tesis\codes\Main code\STM32_PIP_Produccion\STM32F103CBTX_FLASH.ld" --specs=nosys.specs -Wl,-Map="STM32_PIP_Produccion.map" -Wl,--gc-sections -static --specs=nano.specs -mfloat-abi=soft -mthumb -u _printf_float -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
@@ -79,17 +79,12 @@ STM32_PIP_Produccion.list: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_
 	@echo 'Finished building: $@'
 	@echo ' '
 
-STM32_PIP_Produccion.bin: $(EXECUTABLES) makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-objcopy  -O binary $(EXECUTABLES) "STM32_PIP_Produccion.bin"
-	@echo 'Finished building: $@'
-	@echo ' '
-
 # Other Targets
 clean:
-	-$(RM) STM32_PIP_Produccion.bin STM32_PIP_Produccion.elf STM32_PIP_Produccion.list default.size.stdout
+	-$(RM) STM32_PIP_Produccion.elf STM32_PIP_Produccion.list STM32_PIP_Produccion.map default.size.stdout
 	-@echo ' '
 
-secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST) $(OBJCOPY_BIN)
+secondary-outputs: $(SIZE_OUTPUT) $(OBJDUMP_LIST)
 
 fail-specified-linker-script-missing:
 	@echo 'Error: Cannot find the specified linker script. Check the linker settings in the build configuration.'
