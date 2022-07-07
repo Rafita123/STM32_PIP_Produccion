@@ -82,7 +82,7 @@ void control_step(void)
    *  Sum: '<S81>/Diff'
    *  Sum: '<S97>/Sum'
    */
-  rtSalida_Control2 = (900.0 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
+  rtSalida_Control2 = (2.28488100454623 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
     (rtb_Tsamp_e - rtUD_DSTATE_m);
 
   /* SampleTimeMath: '<S133>/Tsamp' incorporates:
@@ -140,7 +140,7 @@ void control_step(void)
    *  Gain: '<S85>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control2'
    */
-  rtIntegrator_DSTATE_g = 600.0 * rtEntrada_Control2 * 0.005 +
+  rtIntegrator_DSTATE_g = 456.976200909247 * rtEntrada_Control2 * 0.005 +
     rtIntegrator_DSTATE_g;
 
   /* Update for Delay: '<S81>/UD' */
