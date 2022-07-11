@@ -35,6 +35,8 @@
 #include "control.c"
 #include "control.h"
 
+#include <math.h>
+
 //#include "INA219.h"
 /* USER CODE END Includes */
 
@@ -315,14 +317,17 @@ void configIna219(uint8_t address, uint16_t TO){
 
 float getCurrent(uint8_t address, uint16_t TO){
 
-	float current;
+	float current = 65.535;
 	uint8_t Value[2];
 	int16_t result = 0;
 	int16_t ina219_currentDivider_mA = 10;
 	//	int16_t result = INA219_ReadCurrent_raw(ina219); // read en INA219_REG_CURRENT
+	HAL_StatusTypeDef ret;
 	ret = HAL_I2C_Mem_Read(&hi2c1, (address<<1), INA219_REG_CURRENT, 1, Value, 2, TO);
-	result = ((Value[0] << 8) | Value[1]); // RawCurrent
-	current = ((float)result / (float)ina219_currentDivider_mA);
+	if(ret == HAL_OK){
+		result = ((Value[0] << 8) | Value[1]); // RawCurrent
+		current = ((float)result / (float)ina219_currentDivider_mA);
+	}
 	return current;
 }
 
@@ -349,20 +354,20 @@ float deteccionCero(uint8_t n_motor, uint8_t sentido_, uint8_t cota, float corri
 		referencia = -referencia;
 	}
 
-	if(sentido_ == 1 && corriente <= cota){
-		Sentido(1, n_motor);
-		referencia = referencia;
-	}
+//	if(sentido_ == 1 && corriente <= cota){
+//		Sentido(1, n_motor);
+//		referencia = referencia;
+//	}
 
-	if(sentido_ == 0 && corriente <= -cota){
+	else if(sentido_ == 0 && corriente <= -cota){
 		Sentido(1, n_motor);
 		referencia = -referencia;
 	}
 
-	if(sentido_ == 0 && corriente > -cota){
-		Sentido(0, n_motor);
-		referencia= referencia;
-	}
+//	if(sentido_ == 0 && corriente > -cota){
+//		Sentido(0, n_motor);
+//		referencia= referencia;
+//	}
 	return referencia;
 }
 
@@ -1161,6 +1166,7 @@ void StartTaskControl(void *argument)
 	float Setpoint[4] = {'\0'};
 	uint16_t Sentido_l[4]={'\0'};
 	uint8_t parada=0;
+	uint8_t cota = 50;
 
 
 	//	float error=0;
@@ -1169,6 +1175,7 @@ void StartTaskControl(void *argument)
 	for(;;)
 	{
 		bufferPing[CONTROL_TASK] = 1; //pin para watchdog
+
 		taskENTER_CRITICAL();
 //		velocidad_l[0] = velocidad[0]; //MOTOR1
 //		velocidad_l[1] = velocidad[1]; //MOTOR2
@@ -1203,10 +1210,10 @@ void StartTaskControl(void *argument)
 
 		/////////////////////////////////////////////////////////////////////////////
 
-		Setpoint[0] = deteccionCero(1, Sentido_l[0], 10, current[0], Setpoint[0]);
-		Setpoint[1] = deteccionCero(2, Sentido_l[1], 10, current[1], Setpoint[1]);
-		Setpoint[2] = deteccionCero(4, Sentido_l[2], 10, current[2], Setpoint[2]);/////////////////56465465
-		Setpoint[3] = deteccionCero(3, Sentido_l[3], 10, current[3], Setpoint[3]);
+		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0]);
+		Setpoint[1] = deteccionCero(2, Sentido_l[1], cota, current[1], Setpoint[1]);
+		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2]);// Referencia cruzada de motores y CCR
+		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3]);// Referencia cruzada de motores y CCR
 
 
 		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
@@ -1225,8 +1232,8 @@ void StartTaskControl(void *argument)
 
 		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion1;	//Salida linealizada asignada a CCR
 		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion2;
-		htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion3;
-		htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion4;
+		htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion3;// Referencia cruzada de motores y CCR
+		htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion4;// Referencia cruzada de motores y CCR
 
 
 		osDelay(5);
@@ -1258,6 +1265,7 @@ void StartCorriente(void *argument)
 	for(;;)
 	{
 		bufferPing[CURRENT_TASK] = 1; //pin para watchdog
+
 		current_l[0] = readMotor(INA219_ADDRESS_1,timeOut)*2.0;
 		if(current_l[0] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
 			// por lo que dejo el valor anterior
@@ -1291,16 +1299,16 @@ void StartCorriente(void *argument)
 			taskEXIT_CRITICAL();
 		}
 
-		current_l[3] = readMotor(INA219_ADDRESS_4,timeOut)*2.0;
-		if(current_l[3] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-			// por lo que dejo el valor anterior
-			current_prima2_l[3] = current_prima1_l[3];
-			current_prima1_l[3] = 0.85*current_prima2_l[3] + 0.15*current_l[3];
-			taskENTER_CRITICAL();
-//			current[3] = current_l[3];
-			current[3] = current_prima1_l[3];
-			taskEXIT_CRITICAL();
-		}
+//		current_l[3] = readMotor(INA219_ADDRESS_4,timeOut)*2.0;
+//		if(current_l[3] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//			// por lo que dejo el valor anterior
+//			current_prima2_l[3] = current_prima1_l[3];
+//			current_prima1_l[3] = 0.85*current_prima2_l[3] + 0.15*current_l[3];
+//			taskENTER_CRITICAL();
+////			current[3] = current_l[3];
+//			current[3] = current_prima1_l[3];
+//			taskEXIT_CRITICAL();
+//		}
 		//
 //		current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
 //		if(current_l[4] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
@@ -1347,7 +1355,6 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim)
 		overflow[1] += 1;
 		overflow[2] += 1;
 		overflow[3] += 1;
-		//		HAL_GPIO_TogglePin(LED_GPIO_Port,LED_Pin);
 
 	}
 	/* USER CODE END Callback 1 */
