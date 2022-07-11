@@ -887,6 +887,7 @@ void StartSpeed1(void *argument)
 		}
 		else if (flags_motores_l[1] == 1)
 		{
+			HAL_GPIO_TogglePin(Led_GPIO_Port, Led_Pin);
 			valor = 1;
 		}
 		else if (flags_motores_l[2] == 1)
@@ -975,6 +976,7 @@ void StartSpeed1(void *argument)
 	}
 	/* USER CODE END 5 */
 }
+
 
 /* USER CODE BEGIN Header_StartModbus */
 /**

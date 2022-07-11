@@ -52,7 +52,7 @@ void control_step(void)
    * About '<S33>/Tsamp':
    *  y = u * K where K = 1 / ( w * Ts )
    */
-  rtb_Tsamp = 0.00285610125568279 * rtEntrada_Control1 * 200.0;
+  rtb_Tsamp = 0.01585610125568279 * rtEntrada_Control1 * 200.0;
 
   /* Outport: '<Root>/Salida_Control1' incorporates:
    *  Delay: '<S31>/UD'
@@ -62,7 +62,7 @@ void control_step(void)
    *  Sum: '<S31>/Diff'
    *  Sum: '<S47>/Sum'
    */
-  rtSalida_Control1 = (2.28488100454623 * rtEntrada_Control1 +
+  rtSalida_Control1 = (600 * rtEntrada_Control1 +
                        rtIntegrator_DSTATE) + (rtb_Tsamp - rtUD_DSTATE);
 
   /* SampleTimeMath: '<S83>/Tsamp' incorporates:
@@ -72,7 +72,7 @@ void control_step(void)
    * About '<S83>/Tsamp':
    *  y = u * K where K = 1 / ( w * Ts )
    */
-  rtb_Tsamp_e = 0.00285610125568279 * rtEntrada_Control2 * 200.0;
+  rtb_Tsamp_e = 0.00885610125568279 * rtEntrada_Control2 * 200.0;
 
   /* Outport: '<Root>/Salida_Control2' incorporates:
    *  Delay: '<S81>/UD'
@@ -82,7 +82,7 @@ void control_step(void)
    *  Sum: '<S81>/Diff'
    *  Sum: '<S97>/Sum'
    */
-  rtSalida_Control2 = (2.28488100454623 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
+  rtSalida_Control2 = (50 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
     (rtb_Tsamp_e - rtUD_DSTATE_m);
 
   /* SampleTimeMath: '<S133>/Tsamp' incorporates:
@@ -130,7 +130,7 @@ void control_step(void)
    *  Gain: '<S35>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control1'
    */
-  rtIntegrator_DSTATE = 456.976200909247 * rtEntrada_Control1 * 0.005 +
+  rtIntegrator_DSTATE = 260 * rtEntrada_Control1 * 0.005 +
     rtIntegrator_DSTATE;
 
   /* Update for Delay: '<S31>/UD' */
@@ -140,7 +140,7 @@ void control_step(void)
    *  Gain: '<S85>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control2'
    */
-  rtIntegrator_DSTATE_g = 456.976200909247 * rtEntrada_Control2 * 0.005 +
+  rtIntegrator_DSTATE_g = 280 * rtEntrada_Control2 * 0.005 +
     rtIntegrator_DSTATE_g;
 
   /* Update for Delay: '<S81>/UD' */
