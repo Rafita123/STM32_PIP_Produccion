@@ -133,8 +133,8 @@ const osSemaphoreAttr_t Semaforo1_attributes = {
 //	Addresses
 //
 #define INA219_ADDRESS_1 (0x41) // A0 puenteado
-#define INA219_ADDRESS_2 (0x45) // A0 y A1 puenteados
-#define INA219_ADDRESS_3 (0x44) // A1 puenteado
+#define INA219_ADDRESS_2 (0x44) // A1 puenteado
+#define INA219_ADDRESS_3 (0x45) // A0 y A1 puenteados
 #define INA219_ADDRESS_4 (0x40) // Nada puenteado
 
 #define INA219_ADDRESS_5 (0x4C) // Corriente placa de control
@@ -1280,16 +1280,16 @@ void StartCorriente(void *argument)
 			taskEXIT_CRITICAL();
 		}
 
-//		current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
-//		if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//			// por lo que dejo el valor anterior
-//			current_prima2_l[2] = current_prima1_l[2];
-//			current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
-//			taskENTER_CRITICAL();
+		current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
+		if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			current_prima2_l[2] = current_prima1_l[2];
+			current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
+			taskENTER_CRITICAL();
 //			current[2] = current_l[2];
-////			current[2] = current_prima1_l[2];
-//			taskEXIT_CRITICAL();
-//		}
+			current[2] = current_prima1_l[2];
+			taskEXIT_CRITICAL();
+		}
 
 		current_l[3] = readMotor(INA219_ADDRESS_4,timeOut)*2.0;
 		if(current_l[3] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
