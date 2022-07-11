@@ -171,6 +171,7 @@ float velocidad[N_motores]; //Velocidad cruda
 float velocidad_prima1[N_motores]; //Velocidad filtrada
 float velocidad_prima2[N_motores];
 uint8_t flags_motores[N_motores];// Bandera para saber con que motor estamos trabajando
+uint8_t sentidoDeGiro[N_motores];
 uint8_t bufferPing[N_tasks-1];
 
 // Datos utilizados para el calculo de la velocidad
@@ -231,7 +232,6 @@ void Sentido(uint8_t valor,uint8_t motor){
 		else if(valor == 1){
 			HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, RESET);
 			HAL_GPIO_WritePin(IN1_2_GPIO_Port, IN1_2_Pin, SET);
-
 		}
 		else{ // Break
 			HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, RESET);
@@ -287,6 +287,7 @@ void Sentido(uint8_t valor,uint8_t motor){
 			HAL_GPIO_WritePin(IN4_2_GPIO_Port, IN4_2_Pin, RESET);
 		}
 	}
+	sentidoDeGiro[motor-1]= valor;
 
 }
 
@@ -348,26 +349,21 @@ float readMotor(uint8_t address, uint16_t TO){
 	return current;
 }
 
-float deteccionCero(uint8_t n_motor, uint8_t sentido_, uint8_t cota, float corriente, float referencia){
-	if(sentido_ == 1 && corriente > cota){
-		Sentido(0, n_motor);
-		referencia = -referencia;
-	}
-
-//	if(sentido_ == 1 && corriente <= cota){
-//		Sentido(1, n_motor);
-//		referencia = referencia;
-//	}
-
-	else if(sentido_ == 0 && corriente <= -cota){
+float deteccionCero(uint8_t n_motor, uint8_t sentido_, uint8_t cota, float velocidad, float referencia, uint8_t sentidoActual){
+	if(sentido_ == 1 && sentido_!= sentidoActual){//velocidad > cota
 		Sentido(1, n_motor);
 		referencia = -referencia;
+	}else if(sentido_ == 1 && sentido_== sentidoActual ){//corriente <= cota
+		Sentido(1, n_motor);
+		referencia = referencia;
 	}
-
-//	if(sentido_ == 0 && corriente > -cota){
-//		Sentido(0, n_motor);
-//		referencia= referencia;
-//	}
+	else if(sentido_ == 0 && sentido_!= sentidoActual){//velocidad <= -cota
+		Sentido(0, n_motor);
+		referencia = -referencia;
+	}else if(sentido_ == 0 && sentido_== sentidoActual){// corriente > -cota
+		Sentido(0, n_motor);
+		referencia= referencia;
+	}
 	return referencia;
 }
 
@@ -870,6 +866,10 @@ void StartSpeed1(void *argument)
 	float velocidad_l = 0;
 	uint8_t flags_motores_l[4];
 	uint8_t valor = 0;
+
+	for(int i=0; i<N_motores; i++){
+		sentidoDeGiro[i] = 0;
+	}
 	/* Infinite loop */
 	for(;;)
 	{
@@ -914,9 +914,12 @@ void StartSpeed1(void *argument)
 		//		HAL_NVIC_EnableIRQ(EXTI1_IRQn);
 
 		if (overflow_l == 0){
-			// Todo cool, calculo normal
+			// Tod o cool, calculo normal
 			deltaTicks_l = ticksNow_l - ticksPrev_l;
 			if (deltaTicks_l > tickFilter){
+
+//				if(sentidoDeGiro[valor] == 1) deltaTicks_l=-de7ltaTicks_l;
+
 				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
 				//Filtro IIR
 				velocidad_prima2_l = velocidad_prima1_l;
@@ -939,6 +942,8 @@ void StartSpeed1(void *argument)
 			// Tuve algun desborde y tengo que tenerlo en cuenta
 			deltaTicks_l = (ticksNow_l + overflow_l * cantTicksTmr2)- ticksPrev_l;
 			if (deltaTicks_l > tickFilter){
+//				if(sentidoDeGiro[valor] == 1) deltaTicks_l=-deltaTicks_l;
+
 				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
 				//Filtro IIR
 				velocidad_prima2_l = velocidad_prima1_l;
@@ -1210,10 +1215,10 @@ void StartTaskControl(void *argument)
 
 		/////////////////////////////////////////////////////////////////////////////
 
-		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0]);
-		Setpoint[1] = deteccionCero(2, Sentido_l[1], cota, current[1], Setpoint[1]);
-		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2]);// Referencia cruzada de motores y CCR
-		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3]);// Referencia cruzada de motores y CCR
+		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0], sentidoDeGiro[0]);
+		Setpoint[1] = deteccionCero(2, Sentido_l[1], cota, current[1], Setpoint[1], sentidoDeGiro[1]);
+		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2], sentidoDeGiro[3]);// Referencia cruzada de motores y CCR
+		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3], sentidoDeGiro[2]);// Referencia cruzada de motores y CCR
 
 
 		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
