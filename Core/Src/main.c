@@ -965,12 +965,12 @@ void StartSpeed1(void *argument)
 			}
 		}
 
-		for(int i=0 ; i < N_motores ; i++){
+//		for(int i=0 ; i < N_motores ; i++){
 			taskENTER_CRITICAL();
 			flags_motores_l[valor] = 0;
 			flags_motores[valor] = 0;
 			taskEXIT_CRITICAL();
-		}
+//		}
 		osDelay(1);
 	}
 	/* USER CODE END 5 */
@@ -1262,47 +1262,47 @@ void StartCorriente(void *argument)
 	float current_prima1_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	float current_prima2_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	uint16_t timeOut = 2;
-	configIna219(INA219_ADDRESS_1,timeOut); // Config segun el address
-	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
-	configIna219(INA219_ADDRESS_3,timeOut); // Config segun el address
-	configIna219(INA219_ADDRESS_4,timeOut); // Config segun el address
+//	configIna219(INA219_ADDRESS_1,timeOut); // Config segun el address
+//	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
+//	configIna219(INA219_ADDRESS_3,timeOut); // Config segun el address
+//	configIna219(INA219_ADDRESS_4,timeOut); // Config segun el address
 
 	for(;;)
 	{
 		bufferPing[CURRENT_TASK] = 1; //pin para watchdog
 
-		current_l[0] = readMotor(INA219_ADDRESS_1,timeOut)*2.0;
-		if(current_l[0] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-			// por lo que dejo el valor anterior
-			current_prima2_l[0] = current_prima1_l[0];
-			current_prima1_l[0] = 0.85*current_prima2_l[0] + 0.15*current_l[0];
-			taskENTER_CRITICAL();
-			//			current[0] = current_l[0];
-			current[0] = current_prima1_l[0];
-			taskEXIT_CRITICAL();
-		}
-
-		current_l[1] = readMotor(INA219_ADDRESS_2,timeOut)*2.0;
-		if(current_l[1] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-			// por lo que dejo el valor anterior
-			current_prima2_l[1] = current_prima1_l[1];
-			current_prima1_l[1] = 0.85*current_prima2_l[1] + 0.15*current_l[1];
-			taskENTER_CRITICAL();
-			//			current[1] = current_l[1];
-			current[1] = current_prima1_l[1];
-			taskEXIT_CRITICAL();
-		}
-
-		current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
-		if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-			// por lo que dejo el valor anterior
-			current_prima2_l[2] = current_prima1_l[2];
-			current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
-			taskENTER_CRITICAL();
-//			current[2] = current_l[2];
-			current[2] = current_prima1_l[2];
-			taskEXIT_CRITICAL();
-		}
+//		current_l[0] = readMotor(INA219_ADDRESS_1,timeOut)*2.0;
+//		if(current_l[0] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//			// por lo que dejo el valor anterior
+//			current_prima2_l[0] = current_prima1_l[0];
+//			current_prima1_l[0] = 0.85*current_prima2_l[0] + 0.15*current_l[0];
+//			taskENTER_CRITICAL();
+//			//			current[0] = current_l[0];
+//			current[0] = current_prima1_l[0];
+//			taskEXIT_CRITICAL();
+//		}
+//
+//		current_l[1] = readMotor(INA219_ADDRESS_2,timeOut)*2.0;
+//		if(current_l[1] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//			// por lo que dejo el valor anterior
+//			current_prima2_l[1] = current_prima1_l[1];
+//			current_prima1_l[1] = 0.85*current_prima2_l[1] + 0.15*current_l[1];
+//			taskENTER_CRITICAL();
+//			//			current[1] = current_l[1];
+//			current[1] = current_prima1_l[1];
+//			taskEXIT_CRITICAL();
+//		}
+//
+//		current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
+//		if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//			// por lo que dejo el valor anterior
+//			current_prima2_l[2] = current_prima1_l[2];
+//			current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
+//			taskENTER_CRITICAL();
+////			current[2] = current_l[2];
+//			current[2] = current_prima1_l[2];
+//			taskEXIT_CRITICAL();
+//		}
 
 //		current_l[3] = readMotor(INA219_ADDRESS_4,timeOut)*2.0;
 //		if(current_l[3] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
@@ -1325,13 +1325,13 @@ void StartCorriente(void *argument)
 
 		//		OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
 
-		current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
-		if(current_l[5] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-			// por lo que dejo el valor anterior
-			taskENTER_CRITICAL();
-			current[5] = current_l[5]*3.3;
-			taskEXIT_CRITICAL();
-		}
+//		current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
+//		if(current_l[5] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+//			// por lo que dejo el valor anterior
+//			taskENTER_CRITICAL();
+//			current[5] = current_l[5]*3.3;
+//			taskEXIT_CRITICAL();
+//		}
 
 
 		osDelay(10);
