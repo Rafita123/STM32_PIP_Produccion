@@ -348,25 +348,44 @@ float readMotor(uint8_t address, uint16_t TO){
 	return current;
 }
 
-float deteccionCero(uint8_t n_motor, uint8_t sentido_, uint8_t cota, float corriente, float referencia){
-	if(sentido_ == 1 && corriente > cota){
+float cambioSentido(uint8_t n_motor, uint8_t sentido_, float cota, float velocidad_l, float referencia){
+//	uint16_t Sentido_l[4]={'\0'};
+	float velocidad[4]={'\0'};
+
+	taskENTER_CRITICAL();
+	velocidad[n_motor] = velocidad_prima1[n_motor];
+	taskEXIT_CRITICAL();
+
+	if(sentido_ == 1 && velocidad_l > cota){
 		Sentido(0, n_motor);
 		referencia = -referencia;
-	}
 
-//	if(sentido_ == 1 && corriente <= cota){
-//		Sentido(1, n_motor);
-//		referencia = referencia;
-//	}
+		taskENTER_CRITICAL();
+		velocidad_prima1[n_motor] = -velocidad[n_motor];
+		taskEXIT_CRITICAL();
 
-	else if(sentido_ == 0 && corriente <= -cota){
+	}else if(sentido_ == 1 && velocidad_l <= cota){
+
+		Sentido(1, n_motor);
+		referencia = referencia;
+
+	}else if(sentido_ == 0 && velocidad_l <= -cota){
 		Sentido(1, n_motor);
 		referencia = -referencia;
+
+		taskENTER_CRITICAL();
+		velocidad_prima1[n_motor] = -velocidad[n_motor];
+		taskEXIT_CRITICAL();
+
+	}else if(sentido_ == 0 && velocidad_l > -cota){
+
+		Sentido(0, n_motor);
+		referencia= referencia;
 	}
 
-//	if(sentido_ == 0 && corriente > -cota){
-//		Sentido(0, n_motor);
-//		referencia= referencia;
+
+//	for(int i = 0; i < N_motores; i++){
+//		if(Sentido_l[i] == 1) velocidad[i] = -velocidad[i];
 //	}
 	return referencia;
 }
@@ -989,6 +1008,8 @@ void StartModbus(void *argument)
 	//	uint16_t delta3[2];
 	//	uint16_t delta4[2];
 
+//	uint16_t Sentido_l[4]={'\0'};
+
 	float velocidad[4]={'\0'};
 	uint16_t ModbusDATA_l[N_Modbus] = {'\0'};
 	/* Infinite loop */
@@ -1001,11 +1022,16 @@ void StartModbus(void *argument)
 		velocidad[1] = velocidad_prima1[1];
 		velocidad[2] = velocidad_prima1[2];
 		velocidad[3] = velocidad_prima1[3];
+
+//		Sentido_l[0] = ModbusDATA[1]; //SENTIDO MOTOR 1
+//		Sentido_l[1] = ModbusDATA[7]; //SENTIDO MOTOR 2
+//		Sentido_l[2] = ModbusDATA[13]; //SENTIDO MOTOR 3
+//		Sentido_l[3] = ModbusDATA[19]; //SENTIDO MOTOR 4
 		taskEXIT_CRITICAL();
 
-		for(int i = 0; i < N_motores; i++){
-			if(current[i] < 0) velocidad[i] = -velocidad[i];
-		}
+//		for(int i = 0; i < N_motores; i++){
+//			if(Sentido_l[i] == 1) velocidad[i] = -velocidad[i];
+//		}
 
 		memcpy(delta1, &velocidad[0], sizeof(velocidad[0]));
 		ModbusDATA_l[2]=delta1[0];
@@ -1166,7 +1192,7 @@ void StartTaskControl(void *argument)
 	float Setpoint[4] = {'\0'};
 	uint16_t Sentido_l[4]={'\0'};
 	uint8_t parada=0;
-	uint8_t cota = 50;
+	float cota = 0.1;
 
 
 	//	float error=0;
@@ -1210,10 +1236,10 @@ void StartTaskControl(void *argument)
 
 		/////////////////////////////////////////////////////////////////////////////
 
-		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0]);
-		Setpoint[1] = deteccionCero(2, Sentido_l[1], cota, current[1], Setpoint[1]);
-		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2]);// Referencia cruzada de motores y CCR
-		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3]);// Referencia cruzada de motores y CCR
+		Setpoint[0] = cambioSentido(1, Sentido_l[0], cota, velocidad_l[0], Setpoint[0]);
+		Setpoint[1] = cambioSentido(2, Sentido_l[1], cota, velocidad_l[1], Setpoint[1]);
+		Setpoint[2] = cambioSentido(4, Sentido_l[2], cota, velocidad_l[2], Setpoint[2]);// Referencia cruzada de motores y CCR
+		Setpoint[3] = cambioSentido(3, Sentido_l[3], cota, velocidad_l[3], Setpoint[3]);// Referencia cruzada de motores y CCR
 
 
 		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
