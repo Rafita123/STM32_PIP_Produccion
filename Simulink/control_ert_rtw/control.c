@@ -3,9 +3,9 @@
  *
  * Code generated for Simulink model 'control'.
  *
- * Model version                  : 1.16
+ * Model version                  : 1.20
  * Simulink Coder version         : 9.5 (R2021a) 14-Nov-2020
- * C/C++ source code generated on : Sat Apr  2 12:37:04 2022
+ * C/C++ source code generated on : Fri Jul 15 14:30:49 2022
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -41,9 +41,9 @@ real_T rtUD_DSTATE_mrz;                /* '<S181>/UD' */
 void control_step(void)
 {
   real_T rtb_Tsamp;
+  real_T rtb_Tsamp_b;
   real_T rtb_Tsamp_e;
-  real_T rtb_Tsamp_fo;
-  real_T rtb_Tsamp_pd;
+  real_T rtb_Tsamp_n;
 
   /* SampleTimeMath: '<S33>/Tsamp' incorporates:
    *  Gain: '<S30>/Derivative Gain'
@@ -52,7 +52,7 @@ void control_step(void)
    * About '<S33>/Tsamp':
    *  y = u * K where K = 1 / ( w * Ts )
    */
-  rtb_Tsamp = 0.01585610125568279 * rtEntrada_Control1 * 200.0;
+  rtb_Tsamp = 0.045 * rtEntrada_Control1 * 200.0;
 
   /* Outport: '<Root>/Salida_Control1' incorporates:
    *  Delay: '<S31>/UD'
@@ -62,8 +62,8 @@ void control_step(void)
    *  Sum: '<S31>/Diff'
    *  Sum: '<S47>/Sum'
    */
-  rtSalida_Control1 = (600 * rtEntrada_Control1 +
-                       rtIntegrator_DSTATE) + (rtb_Tsamp - rtUD_DSTATE);
+  rtSalida_Control1 = (600.0 * rtEntrada_Control1 + rtIntegrator_DSTATE) +
+    (rtb_Tsamp - rtUD_DSTATE);
 
   /* SampleTimeMath: '<S83>/Tsamp' incorporates:
    *  Gain: '<S80>/Derivative Gain'
@@ -72,7 +72,7 @@ void control_step(void)
    * About '<S83>/Tsamp':
    *  y = u * K where K = 1 / ( w * Ts )
    */
-  rtb_Tsamp_e = 0.00885610125568279 * rtEntrada_Control2 * 200.0;
+  rtb_Tsamp_e = 0.045 * rtEntrada_Control2 * 200.0;
 
   /* Outport: '<Root>/Salida_Control2' incorporates:
    *  Delay: '<S81>/UD'
@@ -82,7 +82,7 @@ void control_step(void)
    *  Sum: '<S81>/Diff'
    *  Sum: '<S97>/Sum'
    */
-  rtSalida_Control2 = (50 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
+  rtSalida_Control2 = (600.0 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
     (rtb_Tsamp_e - rtUD_DSTATE_m);
 
   /* SampleTimeMath: '<S133>/Tsamp' incorporates:
@@ -92,7 +92,7 @@ void control_step(void)
    * About '<S133>/Tsamp':
    *  y = u * K where K = 1 / ( w * Ts )
    */
-  rtb_Tsamp_fo = 0.00285610125568279 * rtEntrada_Control3 * 200.0;
+  rtb_Tsamp_b = 0.045 * rtEntrada_Control3 * 200.0;
 
   /* Outport: '<Root>/Salida_Control3' incorporates:
    *  Delay: '<S131>/UD'
@@ -102,8 +102,8 @@ void control_step(void)
    *  Sum: '<S131>/Diff'
    *  Sum: '<S147>/Sum'
    */
-  rtSalida_Control3 = (2.28488100454623 * rtEntrada_Control3 +
-                       rtIntegrator_DSTATE_gr) + (rtb_Tsamp_fo - rtUD_DSTATE_mr);
+  rtSalida_Control3 = (600.0 * rtEntrada_Control3 + rtIntegrator_DSTATE_gr) +
+    (rtb_Tsamp_b - rtUD_DSTATE_mr);
 
   /* SampleTimeMath: '<S183>/Tsamp' incorporates:
    *  Gain: '<S180>/Derivative Gain'
@@ -112,7 +112,7 @@ void control_step(void)
    * About '<S183>/Tsamp':
    *  y = u * K where K = 1 / ( w * Ts )
    */
-  rtb_Tsamp_pd = 0.00285610125568279 * rtEntrada_Control4 * 200.0;
+  rtb_Tsamp_n = 0.045 * rtEntrada_Control4 * 200.0;
 
   /* Outport: '<Root>/Salida_Control4' incorporates:
    *  Delay: '<S181>/UD'
@@ -122,16 +122,14 @@ void control_step(void)
    *  Sum: '<S181>/Diff'
    *  Sum: '<S197>/Sum'
    */
-  rtSalida_Control4 = (2.28488100454623 * rtEntrada_Control4 +
-                       rtIntegrator_DSTATE_grm) + (rtb_Tsamp_pd -
-    rtUD_DSTATE_mrz);
+  rtSalida_Control4 = (600.0 * rtEntrada_Control4 + rtIntegrator_DSTATE_grm) +
+    (rtb_Tsamp_n - rtUD_DSTATE_mrz);
 
   /* Update for DiscreteIntegrator: '<S38>/Integrator' incorporates:
    *  Gain: '<S35>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control1'
    */
-  rtIntegrator_DSTATE = 260 * rtEntrada_Control1 * 0.005 +
-    rtIntegrator_DSTATE;
+  rtIntegrator_DSTATE = 260.0 * rtEntrada_Control1 * 0.005 + rtIntegrator_DSTATE;
 
   /* Update for Delay: '<S31>/UD' */
   rtUD_DSTATE = rtb_Tsamp;
@@ -140,7 +138,7 @@ void control_step(void)
    *  Gain: '<S85>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control2'
    */
-  rtIntegrator_DSTATE_g = 280 * rtEntrada_Control2 * 0.005 +
+  rtIntegrator_DSTATE_g = 260.0 * rtEntrada_Control2 * 0.005 +
     rtIntegrator_DSTATE_g;
 
   /* Update for Delay: '<S81>/UD' */
@@ -150,21 +148,21 @@ void control_step(void)
    *  Gain: '<S135>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control3'
    */
-  rtIntegrator_DSTATE_gr = 456.976200909247 * rtEntrada_Control3 * 0.005 +
+  rtIntegrator_DSTATE_gr = 260.0 * rtEntrada_Control3 * 0.005 +
     rtIntegrator_DSTATE_gr;
 
   /* Update for Delay: '<S131>/UD' */
-  rtUD_DSTATE_mr = rtb_Tsamp_fo;
+  rtUD_DSTATE_mr = rtb_Tsamp_b;
 
   /* Update for DiscreteIntegrator: '<S188>/Integrator' incorporates:
    *  Gain: '<S185>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control4'
    */
-  rtIntegrator_DSTATE_grm = 456.976200909247 * rtEntrada_Control4 * 0.005 +
+  rtIntegrator_DSTATE_grm = 260.0 * rtEntrada_Control4 * 0.005 +
     rtIntegrator_DSTATE_grm;
 
   /* Update for Delay: '<S181>/UD' */
-  rtUD_DSTATE_mrz = rtb_Tsamp_pd;
+  rtUD_DSTATE_mrz = rtb_Tsamp_n;
 }
 
 /* Model initialize function */

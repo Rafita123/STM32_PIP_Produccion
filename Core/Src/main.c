@@ -134,12 +134,12 @@ const osSemaphoreAttr_t Semaforo1_attributes = {
 //
 //	Addresses
 //
-#define INA219_ADDRESS_1 (0x41) // A0 puenteado
-#define INA219_ADDRESS_2 (0x44) // A1 puenteado
-#define INA219_ADDRESS_3 (0x45) // A0 y A1 puenteados
-#define INA219_ADDRESS_4 (0x40) // Nada puenteado
+#define INA219_ADDRESS_1 (0x45) // A0 y A1 puenteados
+#define INA219_ADDRESS_2 (0x41) // A0 puenteado
+#define INA219_ADDRESS_3 (0x44) // A1 puenteado
+//#define INA219_ADDRESS_4 (0x40) // Nada puenteado
 
-#define INA219_ADDRESS_5 (0x4C) // Corriente placa de control
+//#define INA219_ADDRESS_5 (0x4C) // Corriente placa de control
 #define INA219_ADDRESS_6 (0x42) // Corriente sobre R conocida para tension de bus
 
 #define  N_motores       (0x04)
@@ -919,7 +919,7 @@ void StartSpeed1(void *argument)
 			deltaTicks_l = ticksNow_l - ticksPrev_l;
 			if (deltaTicks_l > tickFilter){
 
-//				if(sentidoDeGiro[valor] == 1) deltaTicks_l=-de7ltaTicks_l;
+				//				if(sentidoDeGiro[valor] == 1) deltaTicks_l=-de7ltaTicks_l;
 
 				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
 				//Filtro IIR
@@ -943,7 +943,7 @@ void StartSpeed1(void *argument)
 			// Tuve algun desborde y tengo que tenerlo en cuenta
 			deltaTicks_l = (ticksNow_l + overflow_l * cantTicksTmr2)- ticksPrev_l;
 			if (deltaTicks_l > tickFilter){
-//				if(sentidoDeGiro[valor] == 1) deltaTicks_l=-deltaTicks_l;
+				//				if(sentidoDeGiro[valor] == 1) deltaTicks_l=-deltaTicks_l;
 
 				velocidad_l = ((1/(float)ranuras)/((float)deltaTicks_l/(float)fsTmr2));
 				//Filtro IIR
@@ -966,12 +966,12 @@ void StartSpeed1(void *argument)
 			}
 		}
 
-//		for(int i=0 ; i < N_motores ; i++){
-			taskENTER_CRITICAL();
-			flags_motores_l[valor] = 0;
-			flags_motores[valor] = 0;
-			taskEXIT_CRITICAL();
-//		}
+		//		for(int i=0 ; i < N_motores ; i++){
+		taskENTER_CRITICAL();
+		flags_motores_l[valor] = 0;
+		flags_motores[valor] = 0;
+		taskEXIT_CRITICAL();
+		//		}
 		osDelay(1);
 	}
 	/* USER CODE END 5 */
@@ -1174,7 +1174,8 @@ void StartTaskControl(void *argument)
 	uint16_t Sentido_l[4]={'\0'};
 	uint8_t parada=0;
 	uint8_t cota = 50;
-
+	uint16_t multiSet;
+	float multiSetpoint;
 
 	//	float error=0;
 
@@ -1184,10 +1185,10 @@ void StartTaskControl(void *argument)
 		bufferPing[CONTROL_TASK] = 1; //pin para watchdog
 
 		taskENTER_CRITICAL();
-//		velocidad_l[0] = velocidad[0]; //MOTOR1
-//		velocidad_l[1] = velocidad[1]; //MOTOR2
-//		velocidad_l[2] = velocidad[2]; //MOTOR3
-//		velocidad_l[3] = velocidad[3]; //MOTOR4
+		//		velocidad_l[0] = velocidad[0]; //MOTOR1
+		//		velocidad_l[1] = velocidad[1]; //MOTOR2
+		//		velocidad_l[2] = velocidad[2]; //MOTOR3
+		//		velocidad_l[3] = velocidad[3]; //MOTOR4
 
 		velocidad_l[0] = velocidad_prima1[0]; //MOTOR1
 		velocidad_l[1] = velocidad_prima1[1]; //MOTOR2
@@ -1207,40 +1208,87 @@ void StartTaskControl(void *argument)
 
 		/////////////// FUNCION PARA PARADA GENERAL /////////////////////////////////
 		parada = ModbusDATA[28];
+
+		multiSet = ModbusDATA[29];
+		multiSetpoint = ModbusDATA[30]/1000.0;
+
+
 		taskEXIT_CRITICAL();
 
-		if(parada == 0){
-			for(int i=0;i<N_motores;i++){
-				Setpoint[i]=0;
-			}
-		}
+		//		if(parada == 0){
+		//			for(int i=0;i<N_motores;i++){
+		//				Setpoint[i]=0;
+		//			}
+		//		}
 
 		/////////////////////////////////////////////////////////////////////////////
+
+		if(multiSet == 1){
+			for(int i=0; i<4 ; i++){ // Pongo el mismo Setpoint para todos los motores
+				Setpoint[i] = multiSetpoint;
+			}
+			Sentido_l[0]=0;
+			Sentido_l[1]=1;
+			Sentido_l[2]=0;
+			Sentido_l[3]=1;
+
+		} else if(multiSet == 2){
+			for(int i=0; i<4 ; i++){ // Pongo el mismo Setpoint para todos los motores
+				Setpoint[i] = multiSetpoint;
+			}
+			Sentido_l[0]=1;
+			Sentido_l[1]=0;
+			Sentido_l[2]=1;
+			Sentido_l[3]=0;
+		}
 
 		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0], sentidoDeGiro[0]);
 		Setpoint[1] = deteccionCero(2, Sentido_l[1], cota, current[1], Setpoint[1], sentidoDeGiro[1]);
 		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2], sentidoDeGiro[3]);// Referencia cruzada de motores y CCR
 		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3], sentidoDeGiro[2]);// Referencia cruzada de motores y CCR
 
+		if(parada == 1){
 
-		rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
-		rtEntrada_Control2 = Setpoint[1] - velocidad_l[1];
-		rtEntrada_Control3 = Setpoint[2] - velocidad_l[2];
-		rtEntrada_Control4 = Setpoint[3] - velocidad_l[3];
-		control_step(); //Ejecutamos control
+			rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
+			rtEntrada_Control2 = Setpoint[1] - velocidad_l[1];
+			rtEntrada_Control3 = Setpoint[2] - velocidad_l[2];
+			rtEntrada_Control4 = Setpoint[3] - velocidad_l[3];
+			control_step(); //Ejecutamos control
 
+			rtEntrada_Linealizacion1 = rtSalida_Control1;	//Salida PID asignada a entrada de planta linealizadora
+			rtEntrada_Linealizacion2 = rtSalida_Control2;
+			rtEntrada_Linealizacion3 = rtSalida_Control3;
+			rtEntrada_Linealizacion4 = rtSalida_Control4;
 
-		rtEntrada_Linealizacion1 = rtSalida_Control1;	//Salida PID asignada a entrada de planta linealizadora
-		rtEntrada_Linealizacion2 = rtSalida_Control2;
-		rtEntrada_Linealizacion3 = rtSalida_Control3;
-		rtEntrada_Linealizacion4 = rtSalida_Control4;
+			Linealizacion_step();	//Ejecutamos planta linealizadora
 
-		Linealizacion_step();	//Ejecutamos planta linealizadora
+			htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion1;	//Salida linealizada asignada a CCR
+			htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion2;
+			htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion3;// Referencia cruzada de motores y CCR
+			htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion4;// Referencia cruzada de motores y CCR
 
-		htim1.Instance->CCR1 = (uint32_t)rtSalida_Linealizacion1;	//Salida linealizada asignada a CCR
-		htim1.Instance->CCR2 = (uint32_t)rtSalida_Linealizacion2;
-		htim1.Instance->CCR4 = (uint32_t)rtSalida_Linealizacion3;// Referencia cruzada de motores y CCR
-		htim1.Instance->CCR3 = (uint32_t)rtSalida_Linealizacion4;// Referencia cruzada de motores y CCR
+		} else	{
+
+			HAL_GPIO_WritePin(IN1_1_GPIO_Port, IN1_1_Pin, SET);// Dejo estado flotando
+			HAL_GPIO_WritePin(IN1_2_GPIO_Port, IN1_2_Pin, SET);// Dejo estado flotando
+
+			HAL_GPIO_WritePin(IN2_1_GPIO_Port, IN2_1_Pin, SET);// Dejo estado flotando
+			HAL_GPIO_WritePin(IN2_2_GPIO_Port, IN2_2_Pin, SET);// Dejo estado flotando
+
+			HAL_GPIO_WritePin(IN3_1_GPIO_Port, IN3_1_Pin, SET);// Dejo estado flotando
+			HAL_GPIO_WritePin(IN3_2_GPIO_Port, IN3_2_Pin, SET);// Dejo estado flotando
+
+			HAL_GPIO_WritePin(IN4_1_GPIO_Port, IN4_1_Pin, SET);// Dejo estado flotando
+			HAL_GPIO_WritePin(IN4_2_GPIO_Port, IN4_2_Pin, SET);// Dejo estado flotando
+
+			// Cero los valores de CCR ahora qeu esta flotando, para evitar frenar de golpe
+			// Se frenará solo por la fricción
+			htim1.Instance->CCR1 = 0;//Salida linealizada asignada a CCR
+			htim1.Instance->CCR2 = 0;
+			htim1.Instance->CCR4 = 0;// Referencia cruzada de motores y CCR
+			htim1.Instance->CCR3 = 0;// Referencia cruzada de motores y CCR
+
+		}
 
 
 		osDelay(5);
@@ -1248,7 +1296,6 @@ void StartTaskControl(void *argument)
 
 	/* USER CODE END StartTaskControl */
 }
-
 /* USER CODE BEGIN Header_StartCorriente */
 /**
  * @brief Function implementing the Corriente thread.
@@ -1264,76 +1311,76 @@ void StartCorriente(void *argument)
 	float current_prima1_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	float current_prima2_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	uint16_t timeOut = 2;
-//	configIna219(INA219_ADDRESS_1,timeOut); // Config segun el address
-//	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
-//	configIna219(INA219_ADDRESS_3,timeOut); // Config segun el address
-//	configIna219(INA219_ADDRESS_4,timeOut); // Config segun el address
+	//	configIna219(INA219_ADDRESS_1,timeOut); // Config segun el address
+	//	configIna219(INA219_ADDRESS_2,timeOut); // Config segun el address
+	//	configIna219(INA219_ADDRESS_3,timeOut); // Config segun el address
+	//	configIna219(INA219_ADDRESS_4,timeOut); // Config segun el address
 
 	for(;;)
 	{
 		bufferPing[CURRENT_TASK] = 1; //pin para watchdog
 
-//		current_l[0] = readMotor(INA219_ADDRESS_1,timeOut)*2.0;
-//		if(current_l[0] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//			// por lo que dejo el valor anterior
-//			current_prima2_l[0] = current_prima1_l[0];
-//			current_prima1_l[0] = 0.85*current_prima2_l[0] + 0.15*current_l[0];
-//			taskENTER_CRITICAL();
-//			//			current[0] = current_l[0];
-//			current[0] = current_prima1_l[0];
-//			taskEXIT_CRITICAL();
-//		}
-//
-//		current_l[1] = readMotor(INA219_ADDRESS_2,timeOut)*2.0;
-//		if(current_l[1] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//			// por lo que dejo el valor anterior
-//			current_prima2_l[1] = current_prima1_l[1];
-//			current_prima1_l[1] = 0.85*current_prima2_l[1] + 0.15*current_l[1];
-//			taskENTER_CRITICAL();
-//			//			current[1] = current_l[1];
-//			current[1] = current_prima1_l[1];
-//			taskEXIT_CRITICAL();
-//		}
-//
-//		current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
-//		if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//			// por lo que dejo el valor anterior
-//			current_prima2_l[2] = current_prima1_l[2];
-//			current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
-//			taskENTER_CRITICAL();
-////			current[2] = current_l[2];
-//			current[2] = current_prima1_l[2];
-//			taskEXIT_CRITICAL();
-//		}
+				current_l[0] = readMotor(INA219_ADDRESS_1,timeOut)*2.0;
+				if(current_l[0] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+					// por lo que dejo el valor anterior
+					current_prima2_l[0] = current_prima1_l[0];
+					current_prima1_l[0] = 0.85*current_prima2_l[0] + 0.15*current_l[0];
+					taskENTER_CRITICAL();
+					//			current[0] = current_l[0];
+					current[0] = current_prima1_l[0];
+					taskEXIT_CRITICAL();
+				}
 
-//		current_l[3] = readMotor(INA219_ADDRESS_4,timeOut)*2.0;
-//		if(current_l[3] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//			// por lo que dejo el valor anterior
-//			current_prima2_l[3] = current_prima1_l[3];
-//			current_prima1_l[3] = 0.85*current_prima2_l[3] + 0.15*current_l[3];
-//			taskENTER_CRITICAL();
-////			current[3] = current_l[3];
-//			current[3] = current_prima1_l[3];
-//			taskEXIT_CRITICAL();
-//		}
+				current_l[1] = readMotor(INA219_ADDRESS_2,timeOut)*2.0;
+				if(current_l[1] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+					// por lo que dejo el valor anterior
+					current_prima2_l[1] = current_prima1_l[1];
+					current_prima1_l[1] = 0.85*current_prima2_l[1] + 0.15*current_l[1];
+					taskENTER_CRITICAL();
+					//			current[1] = current_l[1];
+					current[1] = current_prima1_l[1];
+					taskEXIT_CRITICAL();
+				}
+
+				current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
+				if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+					// por lo que dejo el valor anterior
+					current_prima2_l[2] = current_prima1_l[2];
+					current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
+					taskENTER_CRITICAL();
+		//			current[2] = current_l[2];
+					current[2] = current_prima1_l[2];
+					taskEXIT_CRITICAL();
+				}
+
+		//		current_l[3] = readMotor(INA219_ADDRESS_4,timeOut)*2.0;
+		//		if(current_l[3] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+		//			// por lo que dejo el valor anterior
+		//			current_prima2_l[3] = current_prima1_l[3];
+		//			current_prima1_l[3] = 0.85*current_prima2_l[3] + 0.15*current_l[3];
+		//			taskENTER_CRITICAL();
+		////			current[3] = current_l[3];
+		//			current[3] = current_prima1_l[3];
+		//			taskEXIT_CRITICAL();
+		//		}
 		//
-//		current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
-//		if(current_l[4] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//			// por lo que dejo el valor anterior
-//			taskENTER_CRITICAL();
-//			current[4] = current_l[4];
-//			taskEXIT_CRITICAL();
-//		}
+		//		current_l[4] = readMotor(INA219_ADDRESS_5,timeOut);
+		//		if(current_l[4] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+		//			// por lo que dejo el valor anterior
+		//			taskENTER_CRITICAL();
+		//			current[4] = current_l[4];
+		//			taskEXIT_CRITICAL();
+		//		}
 
 		//		OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
 
-//		current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
-//		if(current_l[5] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-//			// por lo que dejo el valor anterior
-//			taskENTER_CRITICAL();
-//			current[5] = current_l[5]*3.3;
-//			taskEXIT_CRITICAL();
-//		}
+				current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
+				if(current_l[5] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+					// por lo que dejo el valor anterior
+					taskENTER_CRITICAL();
+					current[5] = current_l[5]*3.3;
+					taskEXIT_CRITICAL();
+				}
 
 
 		osDelay(10);
