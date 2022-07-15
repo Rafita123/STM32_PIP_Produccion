@@ -349,18 +349,23 @@ float readMotor(uint8_t address, uint16_t TO){
 	return current;
 }
 
-float deteccionCero(uint8_t n_motor, uint8_t sentido_, uint8_t cota, float velocidad, float referencia, uint8_t sentidoActual){
-	if(sentido_ == 1 && sentido_!= sentidoActual){//velocidad > cota
-		Sentido(1, n_motor);
+float deteccionCero(uint8_t n_motor, uint8_t sentido_, uint8_t cota, float corriente, float referencia){
+	if(sentido_ == 1 && corriente > cota){
+		Sentido(0, n_motor);
 		referencia = -referencia;
-	}else if(sentido_ == 1 && sentido_== sentidoActual ){//corriente <= cota
+	}
+
+	if(sentido_ == 1 && corriente <= cota){
 		Sentido(1, n_motor);
 		referencia = referencia;
 	}
-	else if(sentido_ == 0 && sentido_!= sentidoActual){//velocidad <= -cota
-		Sentido(0, n_motor);
+
+	if(sentido_ == 0 && corriente <= -cota){
+		Sentido(1, n_motor);
 		referencia = -referencia;
-	}else if(sentido_ == 0 && sentido_== sentidoActual){// corriente > -cota
+	}
+
+	if(sentido_ == 0 && corriente > -cota){
 		Sentido(0, n_motor);
 		referencia= referencia;
 	}
@@ -1215,14 +1220,6 @@ void StartTaskControl(void *argument)
 
 		taskEXIT_CRITICAL();
 
-		//		if(parada == 0){
-		//			for(int i=0;i<N_motores;i++){
-		//				Setpoint[i]=0;
-		//			}
-		//		}
-
-		/////////////////////////////////////////////////////////////////////////////
-
 		if(multiSet == 1){
 			for(int i=0; i<4 ; i++){ // Pongo el mismo Setpoint para todos los motores
 				Setpoint[i] = multiSetpoint;
@@ -1242,10 +1239,18 @@ void StartTaskControl(void *argument)
 			Sentido_l[3]=0;
 		}
 
-		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0], sentidoDeGiro[0]);
-		Setpoint[1] = deteccionCero(2, Sentido_l[1], cota, current[1], Setpoint[1], sentidoDeGiro[1]);
-		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2], sentidoDeGiro[3]);// Referencia cruzada de motores y CCR
-		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3], sentidoDeGiro[2]);// Referencia cruzada de motores y CCR
+//		if(parada == 0){
+//			for(int i=0;i<N_motores;i++){
+//				Setpoint[i]=0;
+//			}
+//		}
+
+		///////////////////////////////////////////////////////////////////////////
+
+		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0]);
+		Setpoint[1] = deteccionCero(2, Sentido_l[1], cota, current[1], Setpoint[1]);
+		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2]);// Referencia cruzada de motores y CCR
+		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3]);// Referencia cruzada de motores y CCR
 
 		if(parada == 1){
 
@@ -1320,7 +1325,7 @@ void StartCorriente(void *argument)
 {
 	/* USER CODE BEGIN StartCorriente */
 	/* Infinite loop */
-	float current_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
+	float current_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.1};
 	float current_prima1_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	float current_prima2_l[6] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0};
 	uint16_t timeOut = 2;
@@ -1333,38 +1338,38 @@ void StartCorriente(void *argument)
 	{
 		bufferPing[CURRENT_TASK] = 1; //pin para watchdog
 
-				current_l[0] = readMotor(INA219_ADDRESS_1,timeOut)*2.0;
-				if(current_l[0] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-					// por lo que dejo el valor anterior
-					current_prima2_l[0] = current_prima1_l[0];
-					current_prima1_l[0] = 0.85*current_prima2_l[0] + 0.15*current_l[0];
-					taskENTER_CRITICAL();
-					//			current[0] = current_l[0];
-					current[0] = current_prima1_l[0];
-					taskEXIT_CRITICAL();
-				}
+		current_l[0] = readMotor(INA219_ADDRESS_1,timeOut)*2.0;
+		if(current_l[0] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			current_prima2_l[0] = current_prima1_l[0];
+			current_prima1_l[0] = 0.85*current_prima2_l[0] + 0.15*current_l[0];
+			taskENTER_CRITICAL();
+			//			current[0] = current_l[0];
+			current[0] = current_prima1_l[0];
+			taskEXIT_CRITICAL();
+		}
 
-				current_l[1] = readMotor(INA219_ADDRESS_2,timeOut)*2.0;
-				if(current_l[1] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-					// por lo que dejo el valor anterior
-					current_prima2_l[1] = current_prima1_l[1];
-					current_prima1_l[1] = 0.85*current_prima2_l[1] + 0.15*current_l[1];
-					taskENTER_CRITICAL();
-					//			current[1] = current_l[1];
-					current[1] = current_prima1_l[1];
-					taskEXIT_CRITICAL();
-				}
+		current_l[1] = readMotor(INA219_ADDRESS_2,timeOut)*2.0;
+		if(current_l[1] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			current_prima2_l[1] = current_prima1_l[1];
+			current_prima1_l[1] = 0.85*current_prima2_l[1] + 0.15*current_l[1];
+			taskENTER_CRITICAL();
+			//			current[1] = current_l[1];
+			current[1] = current_prima1_l[1];
+			taskEXIT_CRITICAL();
+		}
 
-				current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
-				if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-					// por lo que dejo el valor anterior
-					current_prima2_l[2] = current_prima1_l[2];
-					current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
-					taskENTER_CRITICAL();
-		//			current[2] = current_l[2];
-					current[2] = current_prima1_l[2];
-					taskEXIT_CRITICAL();
-				}
+		current_l[2] = readMotor(INA219_ADDRESS_3,timeOut)*2.0;
+		if(current_l[2] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			current_prima2_l[2] = current_prima1_l[2];
+			current_prima1_l[2] = 0.85*current_prima2_l[2] + 0.15*current_l[2];
+			taskENTER_CRITICAL();
+			//			current[2] = current_l[2];
+			current[2] = current_prima1_l[2];
+			taskEXIT_CRITICAL();
+		}
 
 		//		current_l[3] = readMotor(INA219_ADDRESS_4,timeOut)*2.0;
 		//		if(current_l[3] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
@@ -1387,13 +1392,13 @@ void StartCorriente(void *argument)
 
 		//		OJO OJETE HACER LA CONVERSION DE LA TENSION DEL BUS EN EL QUE CORRESPONDA
 
-				current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
-				if(current_l[5] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
-					// por lo que dejo el valor anterior
-					taskENTER_CRITICAL();
-					current[5] = current_l[5]*3.3;
-					taskEXIT_CRITICAL();
-				}
+		current_l[5] = readMotor(INA219_ADDRESS_6,timeOut);
+		if(current_l[5] != 65.535){	// 65535 Es un estado que significa que el I2c estaba ocupado o no pudo leer la corriente
+			// por lo que dejo el valor anterior
+			taskENTER_CRITICAL();
+			current[5] = current_l[5]*3.3;
+			taskEXIT_CRITICAL();
+		}
 
 
 		osDelay(10);
