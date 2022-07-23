@@ -1010,8 +1010,24 @@ void StartModbus(void *argument)
 		velocidad[3] = velocidad_prima1[3];
 		taskEXIT_CRITICAL();
 
-		for(int i = 0; i < N_motores; i++){
-			if(current[i] < 0) velocidad[i] = -velocidad[i];
+
+		//Actualizo visualizacion de velocidad
+		// Si existe un multiSet:
+		if(ModbusDATA[29] == 1){
+			velocidad[0] = velocidad[0];
+			velocidad[1] = -velocidad[1];
+			velocidad[2] = velocidad[2];
+			velocidad[3] = -velocidad[3];
+		} else if(ModbusDATA[29] == 2){
+			velocidad[0] = -velocidad[0];
+			velocidad[1] = velocidad[1];
+			velocidad[2] = -velocidad[2];
+			velocidad[3] = velocidad[3];
+		}else{// Si no hay multiSet
+			if(ModbusDATA[1] != 0) velocidad[0] = -velocidad[0];
+			if(ModbusDATA[7] != 0) velocidad[1] = -velocidad[1];
+			if(ModbusDATA[13] != 0) velocidad[2] = -velocidad[2];
+			if(ModbusDATA[19] != 0) velocidad[3] = -velocidad[3];
 		}
 
 		memcpy(delta1, &velocidad[0], sizeof(velocidad[0]));
@@ -1106,6 +1122,7 @@ void StartCheckVelocidad(void *argument)
 	/* USER CODE BEGIN StartCheckVelocidad */
 
 	uint16_t overflow_l[4] ={'\0'};
+	uint8_t desbordes = 2;
 
 	/* Infinite loop */
 	for(;;)
@@ -1118,7 +1135,7 @@ void StartCheckVelocidad(void *argument)
 		overflow_l[3] = overflow[3];
 		taskEXIT_CRITICAL();
 
-		if(overflow_l[0] >= 3){
+		if(overflow_l[0] >= desbordes){
 			overflow_l[0] = 0;
 			taskENTER_CRITICAL();
 			overflow[0] = 0;
@@ -1127,7 +1144,7 @@ void StartCheckVelocidad(void *argument)
 			velocidad[0] = 0;
 			taskEXIT_CRITICAL();
 		}
-		if(overflow_l[1] >= 3){
+		if(overflow_l[1] >= desbordes){
 			overflow_l[1] = 0;
 			taskENTER_CRITICAL();
 			overflow[1] = 0;
@@ -1136,7 +1153,7 @@ void StartCheckVelocidad(void *argument)
 			velocidad[1] = 0;
 			taskEXIT_CRITICAL();
 		}
-		if(overflow_l[2] >= 3){
+		if(overflow_l[2] >= desbordes){
 			overflow_l[2] = 0;
 			taskENTER_CRITICAL();
 			overflow[2] = 0;
@@ -1145,7 +1162,7 @@ void StartCheckVelocidad(void *argument)
 			velocidad[2] = 0;
 			taskEXIT_CRITICAL();
 		}
-		if(overflow_l[3] >= 3){
+		if(overflow_l[3] >= desbordes){
 			overflow_l[3] = 0;
 			taskENTER_CRITICAL();
 			overflow[3] = 0;
@@ -1223,6 +1240,10 @@ void StartTaskControl(void *argument)
 
 		/////////////////////////////////////////////////////////////////////////////
 
+
+
+
+		// Funcion Reservada para testing
 		if(multiSet == 1){
 			for(int i=0; i<4 ; i++){ // Pongo el mismo Setpoint para todos los motores
 				Setpoint[i] = multiSetpoint;
@@ -1240,6 +1261,18 @@ void StartTaskControl(void *argument)
 			Sentido_l[1]=0;
 			Sentido_l[2]=1;
 			Sentido_l[3]=0;
+		}else{
+
+		}
+
+		// Chequeo datos no validos en setpoint, max 1.2
+		for(int i=0;i<4;i++){
+			if(Setpoint[i]>1.2) {
+				Setpoint[i] = 1.2;
+				taskENTER_CRITICAL();
+				ModbusDATA[6*i] = 1200;
+				taskEXIT_CRITICAL();
+			}
 		}
 
 		Setpoint[0] = deteccionCero(1, Sentido_l[0], cota, current[0], Setpoint[0], sentidoDeGiro[0]);
@@ -1253,6 +1286,7 @@ void StartTaskControl(void *argument)
 			rtEntrada_Control2 = Setpoint[1] - velocidad_l[1];
 			rtEntrada_Control3 = Setpoint[2] - velocidad_l[2];
 			rtEntrada_Control4 = Setpoint[3] - velocidad_l[3];
+
 			control_step(); //Ejecutamos control
 
 			rtEntrada_Linealizacion1 = rtSalida_Control1;	//Salida PID asignada a entrada de planta linealizadora
