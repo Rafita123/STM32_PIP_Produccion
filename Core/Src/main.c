@@ -1322,18 +1322,18 @@ void StartTaskControl(void *argument)
 			htim1.Instance->CCR4 = 0;// Referencia cruzada de motores y CCR
 			htim1.Instance->CCR3 = 0;// Referencia cruzada de motores y CCR
 
-			rtEntrada_Control1 = 0;             /* '<Root>/Entrada_Control1' */
-			rtEntrada_Control2 = 0;             /* '<Root>/Entrada_Control2' */
-			rtEntrada_Control3 = 0;             /* '<Root>/Entrada_Control3' */
-			rtEntrada_Control4 = 0;             /* '<Root>/Entrada_Control4' */
-			rtIntegrator_DSTATE = 0;            /* '<S38>/Integrator' */
-			rtIntegrator_DSTATE_g = 0;          /* '<S88>/Integrator' */
-			rtIntegrator_DSTATE_gr = 0;         /* '<S138>/Integrator' */
-			rtIntegrator_DSTATE_grm = 0;        /* '<S188>/Integrator' */
-			rtUD_DSTATE = 0;                    /* '<S31>/UD' */
-			rtUD_DSTATE_m = 0;                  /* '<S81>/UD' */
-			rtUD_DSTATE_mr = 0;                 /* '<S131>/UD' */
-			rtUD_DSTATE_mrz = 0;
+//			rtEntrada_Control1 = 0;             /* '<Root>/Entrada_Control1' */
+//			rtEntrada_Control2 = 0;             /* '<Root>/Entrada_Control2' */
+//			rtEntrada_Control3 = 0;             /* '<Root>/Entrada_Control3' */
+//			rtEntrada_Control4 = 0;             /* '<Root>/Entrada_Control4' */
+//			rtIntegrator_DSTATE = 0;            /* '<S38>/Integrator' */
+//			rtIntegrator_DSTATE_g = 0;          /* '<S88>/Integrator' */
+//			rtIntegrator_DSTATE_gr = 0;         /* '<S138>/Integrator' */
+//			rtIntegrator_DSTATE_grm = 0;        /* '<S188>/Integrator' */
+//			rtUD_DSTATE = 0;                    /* '<S31>/UD' */
+//			rtUD_DSTATE_m = 0;                  /* '<S81>/UD' */
+//			rtUD_DSTATE_mr = 0;                 /* '<S131>/UD' */
+//			rtUD_DSTATE_mrz = 0;
 
 		}
 
