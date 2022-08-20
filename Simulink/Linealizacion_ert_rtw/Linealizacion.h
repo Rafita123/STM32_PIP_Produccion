@@ -3,9 +3,9 @@
  *
  * Code generated for Simulink model 'Linealizacion'.
  *
- * Model version                  : 1.19
+ * Model version                  : 1.20
  * Simulink Coder version         : 9.5 (R2021a) 14-Nov-2020
- * C/C++ source code generated on : Wed Mar 30 20:01:09 2022
+ * C/C++ source code generated on : Sat Aug 20 11:10:34 2022
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -60,6 +60,7 @@ extern real_T rtp_SignalC1[2];         /* '<Root>/Data Store Memory3' */
 extern real_T rtp_SignalC2[2];         /* '<Root>/Data Store Memory1' */
 extern real_T rtp_SignalC3[2];         /* '<Root>/Data Store Memory' */
 extern real_T rtp_SignalC4[2];         /* '<Root>/Data Store Memory2' */
+extern real_T rtp_SignalC5[2];         /* '<Root>/Data Store Memory5' */
 
 /* Real-time Model object */
 extern RT_MODEL *const rtM;
@@ -80,53 +81,55 @@ extern RT_MODEL *const rtM;
  *
  * '<Root>' : 'Linealizacion'
  * '<S1>'   : 'Linealizacion/Condición 1'
- * '<S2>'   : 'Linealizacion/Condición 10'
- * '<S3>'   : 'Linealizacion/Condición 11'
- * '<S4>'   : 'Linealizacion/Condición 12'
- * '<S5>'   : 'Linealizacion/Condición 13'
- * '<S6>'   : 'Linealizacion/Condición 14'
- * '<S7>'   : 'Linealizacion/Condición 15'
- * '<S8>'   : 'Linealizacion/Condición 16'
- * '<S9>'   : 'Linealizacion/Condición 2'
- * '<S10>'  : 'Linealizacion/Condición 3'
- * '<S11>'  : 'Linealizacion/Condición 4'
- * '<S12>'  : 'Linealizacion/Condición 5'
- * '<S13>'  : 'Linealizacion/Condición 6'
- * '<S14>'  : 'Linealizacion/Condición 7'
- * '<S15>'  : 'Linealizacion/Condición 8'
- * '<S16>'  : 'Linealizacion/Condición 9'
+ * '<S2>'   : 'Linealizacion/Condición 1012'
+ * '<S3>'   : 'Linealizacion/Condición 1113'
+ * '<S4>'   : 'Linealizacion/Condición 12123123'
+ * '<S5>'   : 'Linealizacion/Condición 12125'
+ * '<S6>'   : 'Linealizacion/Condición 12127'
+ * '<S7>'   : 'Linealizacion/Condición 12128'
+ * '<S8>'   : 'Linealizacion/Condición 1213'
+ * '<S9>'   : 'Linealizacion/Condición 126'
+ * '<S10>'  : 'Linealizacion/Condición 143'
+ * '<S11>'  : 'Linealizacion/Condición 144'
+ * '<S12>'  : 'Linealizacion/Condición 1545'
+ * '<S13>'  : 'Linealizacion/Condición 2'
+ * '<S14>'  : 'Linealizacion/Condición 3'
+ * '<S15>'  : 'Linealizacion/Condición 6'
+ * '<S16>'  : 'Linealizacion/Condición 9123'
  * '<S17>'  : 'Linealizacion/Conición 1'
- * '<S18>'  : 'Linealizacion/Conición 2'
- * '<S19>'  : 'Linealizacion/Conición 3'
- * '<S20>'  : 'Linealizacion/Conición 4'
- * '<S21>'  : 'Linealizacion/Conición 5'
- * '<S22>'  : 'Linealizacion/Conición 6'
- * '<S23>'  : 'Linealizacion/Conición 7'
- * '<S24>'  : 'Linealizacion/Conición 8'
- * '<S25>'  : 'Linealizacion/Condición 1/MATLAB Function'
- * '<S26>'  : 'Linealizacion/Condición 10/MATLAB Function'
- * '<S27>'  : 'Linealizacion/Condición 11/MATLAB Function'
- * '<S28>'  : 'Linealizacion/Condición 12/MATLAB Function'
- * '<S29>'  : 'Linealizacion/Condición 13/MATLAB Function'
- * '<S30>'  : 'Linealizacion/Condición 14/MATLAB Function'
- * '<S31>'  : 'Linealizacion/Condición 15/MATLAB Function'
- * '<S32>'  : 'Linealizacion/Condición 16/MATLAB Function'
- * '<S33>'  : 'Linealizacion/Condición 2/MATLAB Function'
- * '<S34>'  : 'Linealizacion/Condición 3/MATLAB Function'
- * '<S35>'  : 'Linealizacion/Condición 4/MATLAB Function'
- * '<S36>'  : 'Linealizacion/Condición 5/MATLAB Function'
- * '<S37>'  : 'Linealizacion/Condición 6/MATLAB Function'
- * '<S38>'  : 'Linealizacion/Condición 7/MATLAB Function'
- * '<S39>'  : 'Linealizacion/Condición 8/MATLAB Function'
- * '<S40>'  : 'Linealizacion/Condición 9/MATLAB Function'
- * '<S41>'  : 'Linealizacion/Conición 1/MATLAB Function'
- * '<S42>'  : 'Linealizacion/Conición 2/MATLAB Function'
- * '<S43>'  : 'Linealizacion/Conición 3/MATLAB Function'
- * '<S44>'  : 'Linealizacion/Conición 4/MATLAB Function'
- * '<S45>'  : 'Linealizacion/Conición 5/MATLAB Function'
- * '<S46>'  : 'Linealizacion/Conición 6/MATLAB Function'
- * '<S47>'  : 'Linealizacion/Conición 7/MATLAB Function'
- * '<S48>'  : 'Linealizacion/Conición 8/MATLAB Function'
+ * '<S18>'  : 'Linealizacion/Conición 12122'
+ * '<S19>'  : 'Linealizacion/Conición 12123'
+ * '<S20>'  : 'Linealizacion/Conición 237'
+ * '<S21>'  : 'Linealizacion/Conición 4'
+ * '<S22>'  : 'Linealizacion/Conición 428'
+ * '<S23>'  : 'Linealizacion/Conición 454'
+ * '<S24>'  : 'Linealizacion/Conición 5'
+ * '<S25>'  : 'Linealizacion/Conición 516'
+ * '<S26>'  : 'Linealizacion/Condición 1/MATLAB Function'
+ * '<S27>'  : 'Linealizacion/Condición 1012/MATLAB Function'
+ * '<S28>'  : 'Linealizacion/Condición 1113/MATLAB Function'
+ * '<S29>'  : 'Linealizacion/Condición 12123123/MATLAB Function'
+ * '<S30>'  : 'Linealizacion/Condición 12125/MATLAB Function'
+ * '<S31>'  : 'Linealizacion/Condición 12127/MATLAB Function'
+ * '<S32>'  : 'Linealizacion/Condición 12128/MATLAB Function'
+ * '<S33>'  : 'Linealizacion/Condición 1213/MATLAB Function'
+ * '<S34>'  : 'Linealizacion/Condición 126/MATLAB Function'
+ * '<S35>'  : 'Linealizacion/Condición 143/MATLAB Function'
+ * '<S36>'  : 'Linealizacion/Condición 144/MATLAB Function'
+ * '<S37>'  : 'Linealizacion/Condición 1545/MATLAB Function'
+ * '<S38>'  : 'Linealizacion/Condición 2/MATLAB Function'
+ * '<S39>'  : 'Linealizacion/Condición 3/MATLAB Function'
+ * '<S40>'  : 'Linealizacion/Condición 6/MATLAB Function'
+ * '<S41>'  : 'Linealizacion/Condición 9123/MATLAB Function'
+ * '<S42>'  : 'Linealizacion/Conición 1/MATLAB Function'
+ * '<S43>'  : 'Linealizacion/Conición 12122/MATLAB Function'
+ * '<S44>'  : 'Linealizacion/Conición 12123/MATLAB Function'
+ * '<S45>'  : 'Linealizacion/Conición 237/MATLAB Function'
+ * '<S46>'  : 'Linealizacion/Conición 4/MATLAB Function'
+ * '<S47>'  : 'Linealizacion/Conición 428/MATLAB Function'
+ * '<S48>'  : 'Linealizacion/Conición 454/MATLAB Function'
+ * '<S49>'  : 'Linealizacion/Conición 5/MATLAB Function'
+ * '<S50>'  : 'Linealizacion/Conición 516/MATLAB Function'
  */
 #endif                                 /* RTW_HEADER_Linealizacion_h_ */
 

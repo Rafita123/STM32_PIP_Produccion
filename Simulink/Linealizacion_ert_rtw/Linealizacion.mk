@@ -2,7 +2,7 @@
 ## Makefile generated for component 'Linealizacion'. 
 ## 
 ## Makefile     : Linealizacion.mk
-## Generated on : Mon Mar 21 18:06:21 2022
+## Generated on : Fri Aug 19 20:15:11 2022
 ## Final product: $(RELATIVE_PATH_TO_ANCHOR)/Linealizacion.exe
 ## Product type : executable
 ## 
@@ -22,7 +22,7 @@ MAKEFILE                  = Linealizacion.mk
 MATLAB_ROOT               = C:/PROGRA~2/POLYSP~1/R2021a
 MATLAB_BIN                = C:/PROGRA~2/POLYSP~1/R2021a/bin
 MATLAB_ARCH_BIN           = $(MATLAB_BIN)/win64
-START_DIR                 = D:/Facu/Facultad/Tesis/codes/Main code/SpeedTest/Testeo_velocidad/Simulink
+START_DIR                 = D:/Facu/Facultad/Tesis/codes/Main code/STM32_PIP_Produccion/Simulink
 SOLVER                    = 
 SOLVER_OBJ                = 
 CLASSIC_INTERFACE         = 0

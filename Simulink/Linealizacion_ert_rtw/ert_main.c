@@ -3,9 +3,9 @@
  *
  * Code generated for Simulink model 'Linealizacion'.
  *
- * Model version                  : 1.19
+ * Model version                  : 1.20
  * Simulink Coder version         : 9.5 (R2021a) 14-Nov-2020
- * C/C++ source code generated on : Wed Mar 30 20:01:09 2022
+ * C/C++ source code generated on : Sat Aug 20 11:10:34 2022
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
