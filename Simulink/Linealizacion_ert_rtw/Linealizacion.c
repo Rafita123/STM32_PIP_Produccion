@@ -3,9 +3,9 @@
  *
  * Code generated for Simulink model 'Linealizacion'.
  *
- * Model version                  : 1.20
+ * Model version                  : 1.23
  * Simulink Coder version         : 9.5 (R2021a) 14-Nov-2020
- * C/C++ source code generated on : Sat Aug 20 11:10:34 2022
+ * C/C++ source code generated on : Sat Sep  3 17:44:03 2022
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -76,52 +76,52 @@ void Linealizacion_step(void)
   if (!(rtu1_p == 0.0)) {
     if (0.0141833 > rtu1_p) {
       /* Outputs for IfAction SubSystem: '<Root>/Condición 2' incorporates:
-       *  ActionPort: '<S13>/Action Port'
+       *  ActionPort: '<S9>/Action Port'
        */
-      /* SignalConversion generated from: '<S13>/y' incorporates:
-       *  DataStoreRead: '<S13>/Data Store Read'
-       *  DataStoreRead: '<S13>/Data Store Read4'
-       *  MATLAB Function: '<S13>/MATLAB Function'
+      /* SignalConversion generated from: '<S9>/y' incorporates:
+       *  DataStoreRead: '<S9>/Data Store Read'
+       *  DataStoreRead: '<S9>/Data Store Read4'
+       *  MATLAB Function: '<S9>/MATLAB Function'
        */
       rtu1_p = rtu1_p * rtp_SignalC1[0] + rtp_SignalC1[1];
 
       /* End of Outputs for SubSystem: '<Root>/Condición 2' */
     } else if ((0.8 >= rtu1_p) >= 0.0141833) {
       /* Outputs for IfAction SubSystem: '<Root>/Condición 3' incorporates:
-       *  ActionPort: '<S14>/Action Port'
+       *  ActionPort: '<S10>/Action Port'
        */
-      /* SignalConversion generated from: '<S14>/Out1' incorporates:
-       *  DataStoreRead: '<S14>/Data Store Read1'
-       *  DataStoreRead: '<S14>/Data Store Read4'
-       *  MATLAB Function: '<S14>/MATLAB Function'
+      /* SignalConversion generated from: '<S10>/Out1' incorporates:
+       *  DataStoreRead: '<S10>/Data Store Read1'
+       *  DataStoreRead: '<S10>/Data Store Read4'
+       *  MATLAB Function: '<S10>/MATLAB Function'
        */
       rtu1_p = rtu1_p * rtp_SignalC2[0] + rtp_SignalC2[1];
 
       /* End of Outputs for SubSystem: '<Root>/Condición 3' */
     } else if ((1.05 > rtu1_p) >= 0.8) {
       /* Outputs for IfAction SubSystem: '<Root>/Conición 4' incorporates:
-       *  ActionPort: '<S21>/Action Port'
+       *  ActionPort: '<S23>/Action Port'
        */
-      /* SignalConversion generated from: '<S21>/Out1' incorporates:
-       *  DataStoreRead: '<S21>/Data Store Read1'
-       *  DataStoreRead: '<S21>/Data Store Read4'
-       *  MATLAB Function: '<S21>/MATLAB Function'
+      /* SignalConversion generated from: '<S23>/Out1' incorporates:
+       *  DataStoreRead: '<S23>/Data Store Read1'
+       *  DataStoreRead: '<S23>/Data Store Read4'
+       *  MATLAB Function: '<S23>/MATLAB Function'
        */
       rtu1_p = rtu1_p * rtp_SignalC3[0] + rtp_SignalC3[1];
 
       /* End of Outputs for SubSystem: '<Root>/Conición 4' */
     } else {
-      /* Outputs for IfAction SubSystem: '<Root>/Condición 6' incorporates:
-       *  ActionPort: '<S15>/Action Port'
+      /* Outputs for IfAction SubSystem: '<Root>/Conición 6' incorporates:
+       *  ActionPort: '<S25>/Action Port'
        */
-      /* SignalConversion generated from: '<S15>/Out1' incorporates:
-       *  DataStoreRead: '<S15>/Data Store Read2'
-       *  DataStoreRead: '<S15>/Data Store Read4'
-       *  MATLAB Function: '<S15>/MATLAB Function'
+      /* SignalConversion generated from: '<S25>/Out1' incorporates:
+       *  DataStoreRead: '<S25>/Data Store Read1'
+       *  DataStoreRead: '<S25>/Data Store Read4'
+       *  MATLAB Function: '<S25>/MATLAB Function'
        */
-      rtu1_p = rtu1_p * rtp_SignalC4[0] + rtp_SignalC4[1];
+      rtu1_p = rtu1_p * rtp_SignalC5[0] + rtp_SignalC5[1];
 
-      /* End of Outputs for SubSystem: '<Root>/Condición 6' */
+      /* End of Outputs for SubSystem: '<Root>/Conición 6' */
     }
   }
 
@@ -136,72 +136,73 @@ void Linealizacion_step(void)
    *  DataStoreRead: '<Root>/Data Store Read'
    */
   if (rtu2_p == 0.0) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 12128' incorporates:
-     *  ActionPort: '<S7>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 4' incorporates:
+     *  ActionPort: '<S11>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion2' incorporates:
-     *  DataStoreRead: '<S7>/Data Store Read'
+     *  DataStoreRead: '<S11>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion1'
-     *  MATLAB Function: '<S7>/MATLAB Function'
+     *  MATLAB Function: '<S11>/MATLAB Function'
      */
     rtSalida_Linealizacion2 = (uint32_T)rtu2_p;
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 12128' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 4' */
   } else if (0.0141833 > rtu2_p) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 12125' incorporates:
-     *  ActionPort: '<S5>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 5' incorporates:
+     *  ActionPort: '<S12>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion2' incorporates:
-     *  DataStoreRead: '<S5>/Data Store Read'
-     *  DataStoreRead: '<S5>/Data Store Read1'
+     *  DataStoreRead: '<S12>/Data Store Read'
+     *  DataStoreRead: '<S12>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion1'
-     *  MATLAB Function: '<S5>/MATLAB Function'
+     *  MATLAB Function: '<S12>/MATLAB Function'
      */
     rtSalida_Linealizacion2 = (uint32_T)(rtu2_p * rtp_SignalC1[0] +
       rtp_SignalC1[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 12125' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 5' */
   } else if ((0.8 >= rtu2_p) >= 0.0141833) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 1213' incorporates:
-     *  ActionPort: '<S8>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 6' incorporates:
+     *  ActionPort: '<S13>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion2' incorporates:
-     *  DataStoreRead: '<S8>/Data Store Read'
-     *  DataStoreRead: '<S8>/Data Store Read1'
+     *  DataStoreRead: '<S13>/Data Store Read1'
+     *  DataStoreRead: '<S13>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion1'
-     *  MATLAB Function: '<S8>/MATLAB Function'
+     *  MATLAB Function: '<S13>/MATLAB Function'
      */
     rtSalida_Linealizacion2 = (uint32_T)(rtu2_p * rtp_SignalC2[0] +
       rtp_SignalC2[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 1213' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 6' */
   } else if ((1.05 > rtu2_p) >= 0.8) {
-    /* Outputs for IfAction SubSystem: '<Root>/Conición 12123' incorporates:
-     *  ActionPort: '<S19>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Conición 1' incorporates:
+     *  ActionPort: '<S17>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion2' incorporates:
-     *  DataStoreRead: '<S19>/Data Store Read'
-     *  DataStoreRead: '<S19>/Data Store Read1'
+     *  DataStoreRead: '<S17>/Data Store Read1'
+     *  DataStoreRead: '<S17>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion1'
-     *  MATLAB Function: '<S19>/MATLAB Function'
+     *  MATLAB Function: '<S17>/MATLAB Function'
      */
     rtSalida_Linealizacion2 = (uint32_T)(rtu2_p * rtp_SignalC3[0] +
       rtp_SignalC3[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Conición 12123' */
+    /* End of Outputs for SubSystem: '<Root>/Conición 1' */
   } else {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 12127' incorporates:
-     *  ActionPort: '<S6>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Conición 3' incorporates:
+     *  ActionPort: '<S22>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion2' incorporates:
-     *  Constant: '<S6>/Constant'
-     *  DataStoreRead: '<S6>/Data Store Read2'
+     *  DataStoreRead: '<S22>/Data Store Read1'
+     *  DataStoreRead: '<S22>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion1'
-     *  MATLAB Function: '<S6>/MATLAB Function'
+     *  MATLAB Function: '<S22>/MATLAB Function'
      */
-    rtSalida_Linealizacion2 = (uint32_T)(1.2 * rtp_SignalC4[0] + rtp_SignalC4[1]);
+    rtSalida_Linealizacion2 = (uint32_T)(rtu2_p * rtp_SignalC5[0] +
+      rtp_SignalC5[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 12127' */
+    /* End of Outputs for SubSystem: '<Root>/Conición 3' */
   }
 
   /* End of If: '<Root>/If1' */
@@ -210,72 +211,73 @@ void Linealizacion_step(void)
    *  DataStoreRead: '<Root>/Data Store Read1'
    */
   if (rtu3_p == 0.0) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 12123123' incorporates:
-     *  ActionPort: '<S4>/Action Port'
-     */
-    /* Outport: '<Root>/Salida_Linealizacion3' incorporates:
-     *  DataStoreRead: '<S4>/Data Store Read1'
-     *  DataTypeConversion: '<Root>/Data Type Conversion2'
-     *  MATLAB Function: '<S4>/MATLAB Function'
-     */
-    rtSalida_Linealizacion3 = (uint32_T)rtu3_p;
-
-    /* End of Outputs for SubSystem: '<Root>/Condición 12123123' */
-  } else if (0.0141833 > rtu3_p) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 9123' incorporates:
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 9' incorporates:
      *  ActionPort: '<S16>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion3' incorporates:
-     *  DataStoreRead: '<S16>/Data Store Read'
-     *  DataStoreRead: '<S16>/Data Store Read1'
+     *  DataStoreRead: '<S16>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion2'
      *  MATLAB Function: '<S16>/MATLAB Function'
+     */
+    rtSalida_Linealizacion3 = (uint32_T)rtu3_p;
+
+    /* End of Outputs for SubSystem: '<Root>/Condición 9' */
+  } else if (0.0141833 > rtu3_p) {
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 10' incorporates:
+     *  ActionPort: '<S2>/Action Port'
+     */
+    /* Outport: '<Root>/Salida_Linealizacion3' incorporates:
+     *  DataStoreRead: '<S2>/Data Store Read'
+     *  DataStoreRead: '<S2>/Data Store Read4'
+     *  DataTypeConversion: '<Root>/Data Type Conversion2'
+     *  MATLAB Function: '<S2>/MATLAB Function'
      */
     rtSalida_Linealizacion3 = (uint32_T)(rtu3_p * rtp_SignalC1[0] +
       rtp_SignalC1[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 9123' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 10' */
   } else if ((0.8 >= rtu3_p) >= 0.0141833) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 1012' incorporates:
-     *  ActionPort: '<S2>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 11' incorporates:
+     *  ActionPort: '<S3>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion3' incorporates:
-     *  DataStoreRead: '<S2>/Data Store Read1'
-     *  DataStoreRead: '<S2>/Data Store Read2'
+     *  DataStoreRead: '<S3>/Data Store Read1'
+     *  DataStoreRead: '<S3>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion2'
-     *  MATLAB Function: '<S2>/MATLAB Function'
+     *  MATLAB Function: '<S3>/MATLAB Function'
      */
     rtSalida_Linealizacion3 = (uint32_T)(rtu3_p * rtp_SignalC2[0] +
       rtp_SignalC2[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 1012' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 11' */
   } else if ((1.05 > rtu3_p) >= 0.8) {
-    /* Outputs for IfAction SubSystem: '<Root>/Conición 516' incorporates:
-     *  ActionPort: '<S25>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Conición 7' incorporates:
+     *  ActionPort: '<S26>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion3' incorporates:
-     *  DataStoreRead: '<S25>/Data Store Read1'
-     *  DataStoreRead: '<S25>/Data Store Read2'
+     *  DataStoreRead: '<S26>/Data Store Read1'
+     *  DataStoreRead: '<S26>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion2'
-     *  MATLAB Function: '<S25>/MATLAB Function'
+     *  MATLAB Function: '<S26>/MATLAB Function'
      */
     rtSalida_Linealizacion3 = (uint32_T)(rtu3_p * rtp_SignalC3[0] +
       rtp_SignalC3[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Conición 516' */
+    /* End of Outputs for SubSystem: '<Root>/Conición 7' */
   } else {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 1113' incorporates:
-     *  ActionPort: '<S3>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Conición 9' incorporates:
+     *  ActionPort: '<S28>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion3' incorporates:
-     *  Constant: '<S3>/Constant'
-     *  DataStoreRead: '<S3>/Data Store Read2'
+     *  DataStoreRead: '<S28>/Data Store Read1'
+     *  DataStoreRead: '<S28>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion2'
-     *  MATLAB Function: '<S3>/MATLAB Function'
+     *  MATLAB Function: '<S28>/MATLAB Function'
      */
-    rtSalida_Linealizacion3 = (uint32_T)(1.2 * rtp_SignalC4[0] + rtp_SignalC4[1]);
+    rtSalida_Linealizacion3 = (uint32_T)(rtu3_p * rtp_SignalC5[0] +
+      rtp_SignalC5[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 1113' */
+    /* End of Outputs for SubSystem: '<Root>/Conición 9' */
   }
 
   /* End of If: '<Root>/If2' */
@@ -284,72 +286,73 @@ void Linealizacion_step(void)
    *  DataStoreRead: '<Root>/Data Store Read2'
    */
   if (rtu4_p == 0.0) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 126' incorporates:
-     *  ActionPort: '<S9>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 13' incorporates:
+     *  ActionPort: '<S5>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion4' incorporates:
-     *  DataStoreRead: '<S9>/Data Store Read2'
+     *  DataStoreRead: '<S5>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion3'
-     *  MATLAB Function: '<S9>/MATLAB Function'
+     *  MATLAB Function: '<S5>/MATLAB Function'
      */
     rtSalida_Linealizacion4 = (uint32_T)rtu4_p;
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 126' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 13' */
   } else if (0.0141833 > rtu4_p) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 143' incorporates:
-     *  ActionPort: '<S10>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 14' incorporates:
+     *  ActionPort: '<S6>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion4' incorporates:
-     *  DataStoreRead: '<S10>/Data Store Read'
-     *  DataStoreRead: '<S10>/Data Store Read2'
+     *  DataStoreRead: '<S6>/Data Store Read'
+     *  DataStoreRead: '<S6>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion3'
-     *  MATLAB Function: '<S10>/MATLAB Function'
+     *  MATLAB Function: '<S6>/MATLAB Function'
      */
     rtSalida_Linealizacion4 = (uint32_T)(rtu4_p * rtp_SignalC1[0] +
       rtp_SignalC1[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 143' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 14' */
   } else if ((0.8 >= rtu4_p) >= 0.0141833) {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 144' incorporates:
-     *  ActionPort: '<S11>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Condición 15' incorporates:
+     *  ActionPort: '<S7>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion4' incorporates:
-     *  DataStoreRead: '<S11>/Data Store Read1'
-     *  DataStoreRead: '<S11>/Data Store Read2'
+     *  DataStoreRead: '<S7>/Data Store Read1'
+     *  DataStoreRead: '<S7>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion3'
-     *  MATLAB Function: '<S11>/MATLAB Function'
+     *  MATLAB Function: '<S7>/MATLAB Function'
      */
     rtSalida_Linealizacion4 = (uint32_T)(rtu4_p * rtp_SignalC2[0] +
       rtp_SignalC2[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 144' */
+    /* End of Outputs for SubSystem: '<Root>/Condición 15' */
   } else if ((1.05 > rtu4_p) >= 0.8) {
-    /* Outputs for IfAction SubSystem: '<Root>/Conición 428' incorporates:
-     *  ActionPort: '<S22>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Conición 10' incorporates:
+     *  ActionPort: '<S18>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion4' incorporates:
-     *  DataStoreRead: '<S22>/Data Store Read1'
-     *  DataStoreRead: '<S22>/Data Store Read2'
+     *  DataStoreRead: '<S18>/Data Store Read1'
+     *  DataStoreRead: '<S18>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion3'
-     *  MATLAB Function: '<S22>/MATLAB Function'
+     *  MATLAB Function: '<S18>/MATLAB Function'
      */
     rtSalida_Linealizacion4 = (uint32_T)(rtu4_p * rtp_SignalC3[0] +
       rtp_SignalC3[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Conición 428' */
+    /* End of Outputs for SubSystem: '<Root>/Conición 10' */
   } else {
-    /* Outputs for IfAction SubSystem: '<Root>/Condición 1545' incorporates:
-     *  ActionPort: '<S12>/Action Port'
+    /* Outputs for IfAction SubSystem: '<Root>/Conición 12' incorporates:
+     *  ActionPort: '<S20>/Action Port'
      */
     /* Outport: '<Root>/Salida_Linealizacion4' incorporates:
-     *  Constant: '<S12>/Constant'
-     *  DataStoreRead: '<S12>/Data Store Read2'
+     *  DataStoreRead: '<S20>/Data Store Read1'
+     *  DataStoreRead: '<S20>/Data Store Read4'
      *  DataTypeConversion: '<Root>/Data Type Conversion3'
-     *  MATLAB Function: '<S12>/MATLAB Function'
+     *  MATLAB Function: '<S20>/MATLAB Function'
      */
-    rtSalida_Linealizacion4 = (uint32_T)(1.2 * rtp_SignalC4[0] + rtp_SignalC4[1]);
+    rtSalida_Linealizacion4 = (uint32_T)(rtu4_p * rtp_SignalC5[0] +
+      rtp_SignalC5[1]);
 
-    /* End of Outputs for SubSystem: '<Root>/Condición 1545' */
+    /* End of Outputs for SubSystem: '<Root>/Conición 12' */
   }
 
   /* End of If: '<Root>/If3' */

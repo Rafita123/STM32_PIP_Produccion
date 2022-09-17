@@ -1,5 +1,5 @@
 Linealizacion.c:42:6:Linealizacion_step	40	static
-Linealizacion.c:359:6:Linealizacion_initialize	4	static
+Linealizacion.c:362:6:Linealizacion_initialize	4	static
 control.c:41:6:control_step	48	static
 control.c:169:6:control_initialize	4	static
 main.c:234:6:Sentido	16	static
