@@ -1233,6 +1233,7 @@ void StartTaskControl(void *argument)
 	uint8_t cota = 50;
 	uint16_t multiSet;
 	float multiSetpoint;
+	float tension=0;
 
 	//	float error=0;
 
@@ -1268,6 +1269,8 @@ void StartTaskControl(void *argument)
 
 		multiSet = ModbusDATA[29];
 		multiSetpoint = ModbusDATA[30]/1000.0;
+
+		tension = current[5];
 
 
 		taskEXIT_CRITICAL();
@@ -1320,7 +1323,7 @@ void StartTaskControl(void *argument)
 		Setpoint[2] = deteccionCero(4, Sentido_l[2], cota, current[2], Setpoint[2], sentidoDeGiro[3]);// Referencia cruzada de motores y CCR
 		Setpoint[3] = deteccionCero(3, Sentido_l[3], cota, current[3], Setpoint[3], sentidoDeGiro[2]);// Referencia cruzada de motores y CCR
 
-		if(parada == 1){
+		if(parada == 1 && tension >= 22.0){
 
 			rtEntrada_Control1 = Setpoint[0] - velocidad_l[0];
 			rtEntrada_Control2 = Setpoint[1] - velocidad_l[1];

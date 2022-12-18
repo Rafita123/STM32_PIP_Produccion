@@ -3,9 +3,9 @@
  *
  * Code generated for Simulink model 'control'.
  *
- * Model version                  : 1.20
+ * Model version                  : 1.22
  * Simulink Coder version         : 9.5 (R2021a) 14-Nov-2020
- * C/C++ source code generated on : Fri Jul 15 14:30:49 2022
+ * C/C++ source code generated on : Sun Dec 18 11:06:10 2022
  *
  * Target selection: ert.tlc
  * Embedded hardware selection: ARM Compatible->ARM Cortex-M
@@ -72,7 +72,7 @@ void control_step(void)
    * About '<S83>/Tsamp':
    *  y = u * K where K = 1 / ( w * Ts )
    */
-  rtb_Tsamp_e = 0.045 * rtEntrada_Control2 * 200.0;
+  rtb_Tsamp_e = 0.00285 * rtEntrada_Control2 * 200.0;
 
   /* Outport: '<Root>/Salida_Control2' incorporates:
    *  Delay: '<S81>/UD'
@@ -82,7 +82,7 @@ void control_step(void)
    *  Sum: '<S81>/Diff'
    *  Sum: '<S97>/Sum'
    */
-  rtSalida_Control2 = (600.0 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
+  rtSalida_Control2 = (2.28 * rtEntrada_Control2 + rtIntegrator_DSTATE_g) +
     (rtb_Tsamp_e - rtUD_DSTATE_m);
 
   /* SampleTimeMath: '<S133>/Tsamp' incorporates:
@@ -138,7 +138,7 @@ void control_step(void)
    *  Gain: '<S85>/Integral Gain'
    *  Inport: '<Root>/Entrada_Control2'
    */
-  rtIntegrator_DSTATE_g = 260.0 * rtEntrada_Control2 * 0.005 +
+  rtIntegrator_DSTATE_g = 456.97 * rtEntrada_Control2 * 0.005 +
     rtIntegrator_DSTATE_g;
 
   /* Update for Delay: '<S81>/UD' */
